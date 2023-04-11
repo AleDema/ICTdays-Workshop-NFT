@@ -1,0 +1,27 @@
+{
+    "dfx": "0.13.1",
+    "defaults": {
+        "build": {
+            "packtool": "npm run --silent sources"
+        }
+    },
+    "canisters": {
+        "DIP721": {
+            "type": "motoko",
+            "main": "backend/DIP721/Main.mo"
+        },
+        "storage": {
+            "type": "motoko",
+            "main": "backend/Storage/FileStorage.mo"
+        },
+        "frontend": {
+            "type": "assets",
+            "frontend": {
+                "entrypoint": "dist/index.html"
+            },
+            "source": [
+                "dist/"
+            ]
+        }
+    }
+}
