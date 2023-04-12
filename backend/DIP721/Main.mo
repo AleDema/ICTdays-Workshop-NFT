@@ -14,11 +14,11 @@ import Result "mo:base/Result";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
-  var x = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
-  custodians := List.push(Principal.fromText("yn4hf-sjbin-irgim-hudxk-tjkcm-id5ea-3g2h6-p7f6z-nti57-sm5dx-sae"), custodians);
+  //TODO: add ypur plug principal here
+  custodians := List.push(Principal.fromText("ig5qb-sewk3-rxbg6-o7x6w-ns7re-g76um-7wgqr-wcgmp-m53x6-chnps-lae"), custodians);
   stable var logo : Types.LogoResult = {
     logo_type = "img";
     data = "";

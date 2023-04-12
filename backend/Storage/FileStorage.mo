@@ -33,7 +33,7 @@ shared ({ caller }) actor class FileStorage() = this {
 
 	//TODO change me when in production
 	let IS_PROD : Bool = false;
-	let IS_PUBLIC : Bool = true; //used to determine if anyone can use the storage canister to add files
+	let IS_PUBLIC : Bool = false; //used to determine if anyone can use the storage canister to add files
 
 	private var assets : HashMap.HashMap<Asset_ID, Asset> = HashMap.HashMap<Asset_ID, Asset>(
 		0,
@@ -50,26 +50,24 @@ shared ({ caller }) actor class FileStorage() = this {
 	);
 	stable var custodian = caller;
 	stable var custodians = List.make<Principal>(custodian);
-	custodians := List.push(Principal.fromText("7b6um-y6qq6-3egoi-xxeae-6zukb-l6n3t-fd6jq-dabcl-yxymy-eue32-qqe"), custodians);
+	custodians := List.push(Principal.fromText("ig5qb-sewk3-rxbg6-o7x6w-ns7re-g76um-7wgqr-wcgmp-m53x6-chnps-lae"), custodians);
+	custodians := List.push(Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai"), custodians); //NFT canister principal
 
-	public shared ({ caller }) func isCustodian() : async Text {
-		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
-			return "not custodian";
-		};
-		return "custodian";
-	};
-
-	func isAuthorized(user : Principal) : Bool {
-		if (IS_PUBLIC) return true;
+	private func isCustodian(user : Principal) : Bool {
 		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == user })) {
 			return false;
 		};
 		return true;
 	};
 
+	func canMint(user : Principal) : Bool {
+		if (IS_PUBLIC) return true;
+		return isCustodian(user);
+	};
+
 	public shared ({ caller }) func addCustodian(new_custodian : Principal) : async Result.Result<Text, Text> {
 		Debug.print(debug_show (caller));
-		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+		if (not isCustodian(caller)) {
 			return #err("not custodian");
 		};
 		custodians := List.push(new_custodian, custodians);
@@ -89,7 +87,7 @@ shared ({ caller }) actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func create_chunk(batch_id : Text, content : Blob, order : Nat) : async Nat {
-		//if (not isAuthorized(caller)) return 0;
+		if (not canMint(caller)) return 0;
 		chunk_id_count := chunk_id_count + 1;
 
 		let asset_chunk : AssetChunk = {
@@ -108,7 +106,7 @@ shared ({ caller }) actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func commit_batch(batch_id : Text, chunk_ids : [Chunk_ID], asset_properties : AssetProperties) : async Result.Result<Asset_ID, Text> {
-		if (not isAuthorized(caller)) return #err("Not authorized");
+		if (not canMint(caller)) return #err("Not authorized");
 
 		let ASSET_ID = Utils.generate_uuid();
 		let CANISTER_ID = Principal.toText(Principal.fromActor(this));
@@ -119,9 +117,9 @@ shared ({ caller }) actor class FileStorage() = this {
 
 		for (chunk in chunks.vals()) {
 			Debug.print(debug_show (Principal.equal(chunk.owner, caller)));
-			// if (not Principal.equal(chunk.owner, caller)) {
-			//   return #err("Unathorized chunk access");
-			// };
+			if (not Principal.equal(chunk.owner, caller)) {
+				return #err("Unathorized chunk access");
+			};
 
 			if (chunk.batch_id == batch_id) {
 				chunks_to_commit.add(chunk);
@@ -178,7 +176,9 @@ shared ({ caller }) actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func delete_all_asset() : async Text {
-		if (not isAuthorized(caller)) return "Not authorized";
+		if (not isCustodian(caller)) {
+			return "not custodian";
+		};
 
 		for (asset_id in assets.keys()) {
 			assets.delete(asset_id);
@@ -188,7 +188,7 @@ shared ({ caller }) actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func clear_chunks() : async () {
-		if (not isAuthorized(caller)) return;
+		if (not canMint(caller)) return;
 		chunks := HashMap.HashMap<Chunk_ID, AssetChunk>(
 			0,
 			Nat.equal,

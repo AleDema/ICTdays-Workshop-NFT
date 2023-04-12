@@ -83,7 +83,8 @@ function App() {
     const uploadChunk = async ({ chunk, order }) => {
       // console.log(storageCanister)
       // console.log(storage)
-      return storage.create_chunk(batch_id, chunk, order);
+      //return storage.create_chunk(batch_id, chunk, order);
+      return storageCanister.create_chunk(batch_id, Array.from(chunk), order);
     };
     const asset_unit8Array = await getUint8Array(file)
     //console.log(asset_unit8Array)
@@ -96,7 +97,6 @@ function App() {
       start += chunkSize, index++
     ) {
       const chunk = asset_unit8Array.slice(start, start + chunkSize);
-      //console.log(chunk)
       promises.push(
         uploadChunk({
           chunk,
@@ -206,8 +206,10 @@ function App() {
         process.env.STORAGE_CANISTER_ID
       ];
 
-      // Host TODO switch for mainnet
-      const host = "http://127.0.0.1:4943"//process.env.DFX_NETWORK;
+      let host = "https://mainnet.dfinity.network"
+      if (process.env.DFX_NETWORK !== "ic") {
+        host = "http://127.0.0.1:4943";
+      }
 
       // Callback to print sessionData
       const onConnectionUpdate = async () => {
@@ -244,6 +246,7 @@ function App() {
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
+    console.log(nftActor)
     setNftCanister(nftActor)
 
     const storageCanisterId = process.env.STORAGE_CANISTER_ID
@@ -264,6 +267,8 @@ function App() {
     window.ic.plug.sessionManager.disconnect()
 
     setPrincipal(null)
+    setNftCanister(null)
+    setStorageCanister(null)
     //clean all state
   }
 
@@ -323,7 +328,6 @@ function App() {
       </div>
       {principal && <>
         <div className="flex flex-row justify-center items-center">
-          {/* <button className=' m-4' onClick={uploadImage}>Test upload</button> */}
           <button onClick={mintNft}>Mint NFT</button>
         </div>
         <div
