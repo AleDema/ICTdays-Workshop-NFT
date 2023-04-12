@@ -20,7 +20,6 @@ import Utils "./utils";
 import Debug "mo:base/Debug";
 import List "mo:base/List";
 
-//TODO prevent anyone from using this canister
 shared ({ caller }) actor class FileStorage() = this {
 	type Asset = Types.Asset;
 	type Asset_ID = Types.Asset_ID;
@@ -48,10 +47,7 @@ shared ({ caller }) actor class FileStorage() = this {
 		Nat.equal,
 		Hash.hash,
 	);
-	stable var custodian = caller;
-	stable var custodians = List.make<Principal>(custodian);
-	custodians := List.push(Principal.fromText("ig5qb-sewk3-rxbg6-o7x6w-ns7re-g76um-7wgqr-wcgmp-m53x6-chnps-lae"), custodians);
-	custodians := List.push(Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai"), custodians); //NFT canister principal
+	stable var custodians = List.make<Principal>(caller);
 
 	private func isCustodian(user : Principal) : Bool {
 		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == user })) {
@@ -71,6 +67,15 @@ shared ({ caller }) actor class FileStorage() = this {
 			return #err("not custodian");
 		};
 		custodians := List.push(new_custodian, custodians);
+		return #ok("custodian");
+	};
+
+	public shared ({ caller }) func addCustodians(custodians_list : List.List<Principal>) : async Result.Result<Text, Text> {
+		Debug.print(debug_show (caller));
+		if (not isCustodian(caller)) {
+			return #err("not custodian");
+		};
+		custodians := List.append(custodians_list, custodians);
 		return #ok("custodian");
 	};
 
@@ -116,6 +121,8 @@ shared ({ caller }) actor class FileStorage() = this {
 		var content_size = 0;
 
 		for (chunk in chunks.vals()) {
+			Debug.print(debug_show (caller));
+			Debug.print(debug_show (chunk.owner));
 			Debug.print(debug_show (Principal.equal(chunk.owner, caller)));
 			if (not Principal.equal(chunk.owner, caller)) {
 				return #err("Unathorized chunk access");

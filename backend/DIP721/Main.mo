@@ -11,13 +11,16 @@ import Principal "mo:base/Principal";
 import Types "./Types";
 import Debug "mo:base/Debug";
 import Result "mo:base/Result";
+import FileStorage "../Storage/FileStorage";
+import Cycles "mo:base/ExperimentalCycles";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
-  //TODO: add ypur plug principal here
+  //TODO: add your plug principal here
+  custodians := List.push(Principal.fromText("m2eif-say6u-qkqyb-x57ff-apqcy-phss6-f3k55-5wynb-l3qq5-u4lge-qqe"), custodians);
   custodians := List.push(Principal.fromText("ig5qb-sewk3-rxbg6-o7x6w-ns7re-g76um-7wgqr-wcgmp-m53x6-chnps-lae"), custodians);
   stable var logo : Types.LogoResult = {
     logo_type = "img";
@@ -27,14 +30,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var symbol : Text = "ICT";
   stable var maxLimit : Nat16 = 100;
   let IS_PROD : Bool = true;
-  let main_storage_principal = "tpyud-myaaa-aaaap-qa4gq-cai";
-  let local_storage_principal = "rkp4c-7iaaa-aaaaa-aaaca-cai";
-  var storage_principal = main_storage_principal;
-  if (IS_PROD) {
-    storage_principal := local_storage_principal;
-  };
+  let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
 
-  let storage_canister = actor (storage_principal) : Types.StorageType;
+  stable var storage_canister_id : Text = "";
+  //stable var storage_canister : Types.StorageType = actor (storage_canister_id);
 
   // https://forum.dfinity.org/t/is-there-any-address-0-equivalent-at-dfinity-motoko/5445/3
   let null_address : Principal = Principal.fromText("aaaaa-aa");
@@ -167,7 +166,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   };
 
   public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {
-    //TODO script
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
       return #Err(#Unauthorized);
     };
@@ -182,7 +180,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     nfts := List.push(nft, nfts);
 
     transactionId += 1;
-    //TODO notifyMaster()
     return #Ok({
       token_id = newId;
       id = transactionId;
@@ -203,7 +200,28 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       return #err("not custodian");
     };
     custodians := List.push(new_custodian, custodians);
-    ignore storage_canister.addCustodian(new_custodian);
+
+    if (storage_canister_id != "") {
+      let storage_canister : Types.StorageType = actor (storage_canister_id);
+      ignore storage_canister.addCustodian(new_custodian);
+    };
     return #ok("custodian");
+  };
+
+  private func create_file_storage_canister() : async () {
+    Cycles.add(CYCLE_AMOUNT);
+    let file_storage_actor = await FileStorage.FileStorage();
+    ignore file_storage_actor.addCustodians(custodians);
+    let principal = Principal.fromActor(file_storage_actor);
+    storage_canister_id := Principal.toText(principal);
+
+  };
+
+  public shared ({ caller }) func get_storage_canister_id() : async Text {
+    if (storage_canister_id == "") {
+      await create_file_storage_canister();
+    };
+
+    return storage_canister_id;
   };
 };

@@ -4,7 +4,7 @@ import motokoLogo from './assets/motoko_moving.png';
 import motokoShadowLogo from './assets/motoko_shadow.png';
 import reactLogo from './assets/react.svg';
 // import { backend } from './declarations/backend';
-import { storage } from './declarations/storage';
+// import { storage } from './declarations/storage';
 import { DIP721 } from './declarations/DIP721';
 import { idlFactory as nftFactory } from './declarations/DIP721';
 import { idlFactory as storageFactory } from './declarations/storage';
@@ -24,24 +24,107 @@ async function getUint8Array(file) {
     reader.readAsArrayBuffer(file);
   });
   const uint8Array = new Uint8Array(arrayBuffer);
-  console.log('Uint8Array:', uint8Array);
   return uint8Array
 }
+
 
 function App() {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
-  const [uploaded, setUploaded] = useState(null);
+  //const [uploaded, setUploaded] = useState(null);
   const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
   const [principal, setPrincipal] = useState(null);
   const [nfts, setNfts] = useState([]);
+  const nftNameField = useRef(null)
+
+  const verifyConnection = async () => {
+    const connected = await window.ic.plug.isConnected();
+    if (!connected) {
+
+      // Whitelist
+      const whitelist = [
+        process.env.DIP721_CANISTER_ID,
+        process.env.STORAGE_CANISTER_ID
+      ];
+
+      let host = "https://mainnet.dfinity.network"
+      if (process.env.DFX_NETWORK !== "ic") {
+        host = "http://127.0.0.1:4943";
+      }
+
+      // Callback to print sessionData
+      const onConnectionUpdate = async () => {
+        console.log(window.ic.plug.sessionManager.sessionData)
+        let principal = await window.ic.plug.getPrincipal()
+        setPrincipal(Principal.fromUint8Array(principal._arr))
+
+      }
+      // Make the request
+      try {
+        const publicKey = await window.ic.plug.requestConnect({
+          whitelist,
+          host,
+          onConnectionUpdate,
+          timeout: 50000
+        });
+
+        console.log(`The connected user's public key is:`, publicKey);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    let principal = await window.ic.plug.getPrincipal()
+    setPrincipal(principal)
+  };
+
+  const initActors = async () => {
+    console.log("initActors")
+    console.log(principal)
+
+    if (!principal) return;
+    const nftCanisterId = process.env.DIP721_CANISTER_ID
+    const nftActor = await window.ic.plug.createActor({
+      canisterId: nftCanisterId,
+      interfaceFactory: nftFactory,
+    });
+    // console.log(nftActor)
+    setNftCanister(nftActor)
+
+    const storageCanisterId = await DIP721.get_storage_canister_id() //gets storage canister id and if it doesnt exist it creates one
+    console.log(storageCanisterId)
+    const storageActor = await window.ic.plug.createActor({
+      canisterId: storageCanisterId,
+      interfaceFactory: storageFactory,
+    });
+
+    setStorageCanister(storageActor)
+  }
+
+
+  const connect = () => {
+    verifyConnection()
+  }
+
+  const disconnect = async () => {
+    window.ic.plug.sessionManager.disconnect()
+
+    setPrincipal(null)
+    setNftCanister(null)
+    setStorageCanister(null)
+    setLoading(null)
+    //clean all state
+  }
+
+  useEffect(() => {
+    initActors()
+  }, [principal]);
 
   function handleFileUpload(event) {
     const selectedFile = event.target.files[0];
-    console.log(selectedFile)
+    // console.log(selectedFile)
     validateFile(selectedFile);
   }
 
@@ -121,16 +204,18 @@ function App() {
     );
     if (!asset_id) {
       console.log("Upload failed, not authorized")
+      setError("Upload failed, not authorized")
       return null
     }
     console.log(asset_id);
-    const { ok: asset } = await storage.get(asset_id);
+    const { ok: asset } = await storageCanister.get(asset_id);
     console.log(asset);
-    setUploaded(asset.url)
+    //setUploaded(asset.url)
     return asset;
   }
 
   const mintNft = async () => {
+    setError(null)
     if (!nftCanister) {
       console.log("init error!")
       return
@@ -138,6 +223,7 @@ function App() {
 
     if (!file) {
       console.log("No File selected")
+      setError("No File selected")
       return
     }
     //upload image
@@ -153,7 +239,7 @@ function App() {
         {
           key: "name",
           val: {
-            TextContent: "Hello ICTdays"
+            TextContent: nftNameField.current.value || "Hello ICTdays"
           }
         },
         {
@@ -178,98 +264,27 @@ function App() {
       ],
       data: []
     }
-    // let arr = arr.push(metadata)
     let p = Principal.fromUint8Array(principal._arr)
     let receipt = await nftCanister.mintDip721(p, [metadata])
+    console.log("receipt")
     console.log(receipt)
     //if minting fails, delete uploaded image
     if (receipt.Err) {
       const res = await storageCanister.delete_asset(onChainFile.id)
       console.log(res)
+      setError(receipt.Err)
     }
 
     if (receipt.Ok) {
       console.log("succesful mint")
+      console.log(receipt.Ok)
+      console.log(receipt.Ok.token_id)
+      let newNft = await nftCanister.getMetadataDip721(receipt.Ok.token_id)
+      setNfts((oldNfts) => {
+        return [newNft.Ok, ...oldNfts]
+      })
     }
     setLoading(false)
-  }
-
-  const verifyConnection = async () => {
-    const connected = await window.ic.plug.isConnected();
-    // console.log(connected);
-    // console.log(process.env.DIP721_CANISTER_ID);
-    if (!connected) {
-
-      // Whitelist
-      const whitelist = [
-        process.env.DIP721_CANISTER_ID,
-        process.env.STORAGE_CANISTER_ID
-      ];
-
-      let host = "https://mainnet.dfinity.network"
-      if (process.env.DFX_NETWORK !== "ic") {
-        host = "http://127.0.0.1:4943";
-      }
-
-      // Callback to print sessionData
-      const onConnectionUpdate = async () => {
-        console.log(window.ic.plug.sessionManager.sessionData)
-        let principal = await window.ic.plug.getPrincipal()
-        setPrincipal(Principal.fromUint8Array(principal._arr))
-
-      }
-      // Make the request
-      try {
-        const publicKey = await window.ic.plug.requestConnect({
-          whitelist,
-          host,
-          onConnectionUpdate,
-          timeout: 50000
-        });
-
-        console.log(`The connected user's public key is:`, publicKey);
-      } catch (e) {
-        console.log(e);
-      }
-    }
-    let principal = await window.ic.plug.getPrincipal()
-    setPrincipal(principal)
-  };
-
-  const initActors = async () => {
-    console.log("initActors")
-    console.log(principal)
-
-    if (!principal) return;
-    const nftCanisterId = process.env.DIP721_CANISTER_ID
-    const nftActor = await window.ic.plug.createActor({
-      canisterId: nftCanisterId,
-      interfaceFactory: nftFactory,
-    });
-    console.log(nftActor)
-    setNftCanister(nftActor)
-
-    const storageCanisterId = process.env.STORAGE_CANISTER_ID
-    const storageActor = await window.ic.plug.createActor({
-      canisterId: storageCanisterId,
-      interfaceFactory: storageFactory,
-    });
-
-    setStorageCanister(storageActor)
-  }
-
-
-  const connect = () => {
-    verifyConnection()
-  }
-
-  const disconnect = async () => {
-    window.ic.plug.sessionManager.disconnect()
-
-    setPrincipal(null)
-    setNftCanister(null)
-    setStorageCanister(null)
-    //clean all state
   }
 
   const fetchData = async () => {
@@ -282,22 +297,24 @@ function App() {
       console.log(item, index);
       let value = await nftCanister.getMetadataDip721(item)
       nfts.push(value.Ok)
-      setNfts(nfts)
-      console.log(`value ${value}`)
+      console.log(`value ${nfts}`)
     });
+    setNfts(nfts)
   }
 
   useEffect(() => {
-    initActors()
-  }, [principal]);
-
-  useEffect(() => {
-    async function loadData() {
-      await fetchData();
-    }
     //console.log(`nftCanister ${nftCanister}`)
-    loadData();
+
+    const init = async () => {
+      fetchData();
+    }
+    init()
+    // const intervalId = setInterval(async () => {
+    //   fetchData();
+    // }, 3000);
+    // return () => clearInterval(intervalId);
   }, [nftCanister, principal]);
+
 
   return (
     <div className="bg-gray-900 w-screen h-screen flex flex-col  ">
@@ -306,12 +323,6 @@ function App() {
         {!principal && <button onClick={connect}>Connect</button>}
       </div>
       <div className="flex flex-row justify-center items-center">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite " alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
         <a
           href="https://internetcomputer.org/docs/current/developer-docs/build/cdks/motoko-dfinity/motoko/"
           target="_blank"
@@ -327,9 +338,6 @@ function App() {
         </a>
       </div>
       {principal && <>
-        <div className="flex flex-row justify-center items-center">
-          <button onClick={mintNft}>Mint NFT</button>
-        </div>
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -337,11 +345,17 @@ function App() {
           onDragLeave={handleDragLeave}
           className={dragging ? 'dragging' : ''}
         >
+          <div>
+            <p>Nft Name:</p>
+            <input type="text" id="nftname" name="nftname" ref={nftNameField} />
+          </div>
           <input type="file" onChange={handleFileUpload} />
+          <div className="flex flex-row justify-center items-center">
+            <button onClick={mintNft}>Mint NFT</button>
+          </div>
           {error && <p>{error}</p>}
-          {file && <p>Selected file: {file.name}</p>}
           {loading && <p>Minting NFT...</p>}
-          <div className="flex flex-row">
+          <div className="flex flex-row flex-wrap">
             {nfts.map((e, i) => {
               let name, url;
               console.log(e)
