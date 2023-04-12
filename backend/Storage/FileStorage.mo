@@ -30,7 +30,6 @@ shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 	let ACTOR_NAME : Text = "FileStorage";
 	let VERSION : Nat = 1;
 
-	//TODO change me when in production
 	let IS_PROD : Bool = is_prod;
 	let IS_PUBLIC : Bool = false; //used to determine if anyone can use the storage canister to add files
 
