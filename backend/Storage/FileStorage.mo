@@ -20,7 +20,7 @@ import Utils "./utils";
 import Debug "mo:base/Debug";
 import List "mo:base/List";
 
-shared ({ caller }) actor class FileStorage() = this {
+shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 	type Asset = Types.Asset;
 	type Asset_ID = Types.Asset_ID;
 	type AssetChunk = Types.AssetChunk;
@@ -31,7 +31,7 @@ shared ({ caller }) actor class FileStorage() = this {
 	let VERSION : Nat = 1;
 
 	//TODO change me when in production
-	let IS_PROD : Bool = false;
+	let IS_PROD : Bool = is_prod;
 	let IS_PUBLIC : Bool = false; //used to determine if anyone can use the storage canister to add files
 
 	private var assets : HashMap.HashMap<Asset_ID, Asset> = HashMap.HashMap<Asset_ID, Asset>(

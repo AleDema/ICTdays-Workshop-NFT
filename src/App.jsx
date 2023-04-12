@@ -7,7 +7,8 @@ import reactLogo from './assets/react.svg';
 // import { storage } from './declarations/storage';
 import { DIP721 } from './declarations/DIP721';
 import { idlFactory as nftFactory } from './declarations/DIP721';
-import { idlFactory as storageFactory } from './declarations/storage';
+// import { idlFactory as storageFactory } from './declarations/storage';
+import { idlFactory as storageFactory } from "../.dfx/local/canisters/storage/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import Card from './components/Card';
 
@@ -33,7 +34,7 @@ function App() {
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
-  //const [uploaded, setUploaded] = useState(null);
+  //const [uploaded, setUploaded] = useState(null);g
   const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
   const [principal, setPrincipal] = useState(null);
@@ -41,40 +42,40 @@ function App() {
   const nftNameField = useRef(null)
 
   const verifyConnection = async () => {
-    const connected = await window.ic.plug.isConnected();
-    if (!connected) {
+    // const connected = await window.ic.plug.isConnected();
 
-      // Whitelist
-      const whitelist = [
-        process.env.DIP721_CANISTER_ID,
-        process.env.STORAGE_CANISTER_ID
-      ];
 
-      let host = "https://mainnet.dfinity.network"
-      if (process.env.DFX_NETWORK !== "ic") {
-        host = "http://127.0.0.1:4943";
-      }
+    // Whitelist
+    const whitelist = [
+      process.env.DIP721_CANISTER_ID,
+    ];
 
-      // Callback to print sessionData
-      const onConnectionUpdate = async () => {
-        console.log(window.ic.plug.sessionManager.sessionData)
-        let principal = await window.ic.plug.getPrincipal()
-        setPrincipal(Principal.fromUint8Array(principal._arr))
+    let host = "https://mainnet.dfinity.network"
+    if (process.env.DFX_NETWORK !== "ic") {
+      host = "http://127.0.0.1:4943";
+    }
+    console.log("host")
+    console.log(process.env.DIP721_CANISTER_ID)
+    console.log(host)
+    // Callback to print sessionData
+    const onConnectionUpdate = async () => {
+      console.log(window.ic.plug.sessionManager.sessionData)
+      let principal = await window.ic.plug.getPrincipal()
+      setPrincipal(Principal.fromUint8Array(principal._arr))
+      initActors()
+    }
+    // Make the request
+    try {
+      const publicKey = await window.ic.plug.requestConnect({
+        whitelist,
+        host,
+        onConnectionUpdate,
+        timeout: 50000
+      });
 
-      }
-      // Make the request
-      try {
-        const publicKey = await window.ic.plug.requestConnect({
-          whitelist,
-          host,
-          onConnectionUpdate,
-          timeout: 50000
-        });
-
-        console.log(`The connected user's public key is:`, publicKey);
-      } catch (e) {
-        console.log(e);
-      }
+      console.log(`The connected user's public key is:`, publicKey);
+    } catch (e) {
+      console.log(e);
     }
     let principal = await window.ic.plug.getPrincipal()
     setPrincipal(principal)
@@ -85,6 +86,20 @@ function App() {
     console.log(principal)
 
     if (!principal) return;
+    let isProd = true
+    if (process.env.DFX_NETWORK !== "ic") {
+      isProd = false;
+    }
+    const storageCanisterId = await DIP721.get_storage_canister_id(isProd) //gets storage canister id and if it doesnt exist it creates one
+    console.log(`storageCanisterId: ${storageCanisterId}`)
+    const storageActor = await window.ic.plug.createActor({
+      canisterId: storageCanisterId,
+      interfaceFactory: storageFactory,
+    });
+
+    setStorageCanister(storageActor)
+
+
     const nftCanisterId = process.env.DIP721_CANISTER_ID
     const nftActor = await window.ic.plug.createActor({
       canisterId: nftCanisterId,
@@ -92,15 +107,6 @@ function App() {
     });
     // console.log(nftActor)
     setNftCanister(nftActor)
-
-    const storageCanisterId = await DIP721.get_storage_canister_id() //gets storage canister id and if it doesnt exist it creates one
-    console.log(storageCanisterId)
-    const storageActor = await window.ic.plug.createActor({
-      canisterId: storageCanisterId,
-      interfaceFactory: storageFactory,
-    });
-
-    setStorageCanister(storageActor)
   }
 
 
@@ -111,11 +117,11 @@ function App() {
   const disconnect = async () => {
     window.ic.plug.sessionManager.disconnect()
 
+    //clean up state
     setPrincipal(null)
     setNftCanister(null)
     setStorageCanister(null)
     setLoading(null)
-    //clean all state
   }
 
   useEffect(() => {
@@ -166,6 +172,7 @@ function App() {
     const uploadChunk = async ({ chunk, order }) => {
       // console.log(storageCanister)
       // console.log(storage)
+      console.log("UPLOADING CHUNKS")
       //return storage.create_chunk(batch_id, chunk, order);
       return storageCanister.create_chunk(batch_id, Array.from(chunk), order);
     };
@@ -207,9 +214,9 @@ function App() {
       setError("Upload failed, not authorized")
       return null
     }
-    console.log(asset_id);
+    //console.log(asset_id);
     const { ok: asset } = await storageCanister.get(asset_id);
-    console.log(asset);
+    //console.log(asset);
     //setUploaded(asset.url)
     return asset;
   }
@@ -294,25 +301,18 @@ function App() {
     const ids = await nftCanister.getTokenIdsForUserDip721(principal)
     const nfts = []
     ids.forEach(async function (item, index) {
-      console.log(item, index);
+      //console.log(item, index);
       let value = await nftCanister.getMetadataDip721(item)
       nfts.push(value.Ok)
-      console.log(`value ${nfts}`)
     });
     setNfts(nfts)
   }
 
   useEffect(() => {
-    //console.log(`nftCanister ${nftCanister}`)
-
     const init = async () => {
       fetchData();
     }
     init()
-    // const intervalId = setInterval(async () => {
-    //   fetchData();
-    // }, 3000);
-    // return () => clearInterval(intervalId);
   }, [nftCanister, principal]);
 
 

@@ -208,18 +208,18 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return #ok("custodian");
   };
 
-  private func create_file_storage_canister() : async () {
+  private func create_file_storage_canister(isProd : Bool) : async () {
     Cycles.add(CYCLE_AMOUNT);
-    let file_storage_actor = await FileStorage.FileStorage();
+    let file_storage_actor = await FileStorage.FileStorage(isProd);
     ignore file_storage_actor.addCustodians(custodians);
     let principal = Principal.fromActor(file_storage_actor);
     storage_canister_id := Principal.toText(principal);
 
   };
 
-  public shared ({ caller }) func get_storage_canister_id() : async Text {
+  public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Text {
     if (storage_canister_id == "") {
-      await create_file_storage_canister();
+      await create_file_storage_canister(isProd);
     };
 
     return storage_canister_id;
