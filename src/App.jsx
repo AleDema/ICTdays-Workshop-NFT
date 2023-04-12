@@ -8,7 +8,7 @@ import reactLogo from './assets/react.svg';
 import { DIP721 } from './declarations/DIP721';
 import { idlFactory as nftFactory } from './declarations/DIP721';
 // import { idlFactory as storageFactory } from './declarations/storage';
-import { idlFactory as storageFactory } from "../.dfx/local/canisters/storage/storage.did.js"
+import { idlFactory as storageFactory } from "./lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import Card from './components/Card';
 
@@ -97,15 +97,13 @@ function App() {
       interfaceFactory: storageFactory,
     });
 
-    setStorageCanister(storageActor)
-
-
     const nftCanisterId = process.env.DIP721_CANISTER_ID
     const nftActor = await window.ic.plug.createActor({
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
     // console.log(nftActor)
+    setStorageCanister(storageActor)
     setNftCanister(nftActor)
   }
 
@@ -115,13 +113,14 @@ function App() {
   }
 
   const disconnect = async () => {
-    window.ic.plug.sessionManager.disconnect()
-
     //clean up state
     setPrincipal(null)
     setNftCanister(null)
     setStorageCanister(null)
     setLoading(null)
+    setFile(null)
+    window.ic.plug.sessionManager.disconnect()
+
   }
 
   useEffect(() => {
@@ -173,7 +172,6 @@ function App() {
       // console.log(storageCanister)
       // console.log(storage)
       console.log("UPLOADING CHUNKS")
-      //return storage.create_chunk(batch_id, chunk, order);
       return storageCanister.create_chunk(batch_id, Array.from(chunk), order);
     };
     const asset_unit8Array = await getUint8Array(file)
@@ -200,6 +198,7 @@ function App() {
 
     const asset_filename = file.name;
     const asset_content_type = file.type
+    console.log("COMMIT BATCH")
     const { ok: asset_id } = await storageCanister.commit_batch(
       batch_id,
       chunk_ids,
@@ -228,7 +227,7 @@ function App() {
       return
     }
 
-    if (!file) {
+    if (file == null) {
       console.log("No File selected")
       setError("No File selected")
       return
@@ -297,6 +296,7 @@ function App() {
   const fetchData = async () => {
 
     console.log(`principal ${principal}`)
+    console.log(nftCanister)
     if (!nftCanister || !principal) return
     const ids = await nftCanister.getTokenIdsForUserDip721(principal)
     const nfts = []
@@ -305,7 +305,9 @@ function App() {
       let value = await nftCanister.getMetadataDip721(item)
       nfts.push(value.Ok)
     });
-    setNfts(nfts)
+    console.log("fetch nfts")
+    console.log(nfts)
+    setNfts((oldnfts) => { return nfts })
   }
 
   useEffect(() => {
@@ -337,40 +339,41 @@ function App() {
           </span>
         </a>
       </div>
-      {principal && <>
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          className={dragging ? 'dragging' : ''}
-        >
-          <div>
-            <p>Nft Name:</p>
-            <input type="text" id="nftname" name="nftname" ref={nftNameField} />
-          </div>
-          <input type="file" onChange={handleFileUpload} />
-          <div className="flex flex-row justify-center items-center">
-            <button onClick={mintNft}>Mint NFT</button>
-          </div>
-          {error && <p>{error}</p>}
-          {loading && <p>Minting NFT...</p>}
-          <div className="flex flex-row flex-wrap">
-            {nfts.map((e, i) => {
-              let name, url;
-              console.log(e)
-              e[0].key_val_data.forEach((item, index) => {
-                if (item.key == "name") name = item.val.TextContent;
-                if (item.key == "location") url = item.val.TextContent;
+      {principal &&
+        <>
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            className={dragging ? 'dragging' : ''}
+          >
+            <div>
+              <p>Nft Name:</p>
+              <input type="text" id="nftname" name="nftname" ref={nftNameField} placeholder="Hello ICTdays" />
+            </div>
+            <input type="file" onChange={handleFileUpload} />
+            <div className="flex flex-row justify-center items-center">
+              <button onClick={mintNft}>Mint NFT</button>
+            </div>
+            {error && <p>{error}</p>}
+            {loading && <p>Minting NFT...</p>}
+            <div className="flex flex-row flex-wrap">
+              {nfts.map((e, i) => {
+                let name, url;
+                //console.log(e)
+                e[0].key_val_data.forEach((item, index) => {
+                  if (item.key == "name") name = item.val.TextContent;
+                  if (item.key == "location") url = item.val.TextContent;
 
-              })
-              return (
-                <Card name={name} url={url}></Card>
-              )
-            })}
+                })
+                return (
+                  <Card key={url} name={name} url={url}></Card>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      </>
+        </>
       }
 
       {!principal && <>
