@@ -24,8 +24,6 @@ function Card(props) {
     return (
         <div className=' w-52 h-fit m-10 rounded-md border-indigo-800 border p-1'>
             <p>{props.name}</p>
-
-            {/* <img className=' object-fill h-56 ' src={props.url}></img> */}
             <FileRenderer src={props.url} mimeType={props.mimeType}></FileRenderer>
             <input type="text" ref={addressField} placeholder='Address'></input>
             <button onClick={() => { props.transfer(props.tokenId, addressField.current.value) }}>Transfer</button>

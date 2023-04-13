@@ -229,9 +229,11 @@ function App() {
       return null
     }
     //console.log(asset_id);
+    console.log("GETTING ID")
     const { ok: asset } = await storageCanister.get(asset_id);
     //console.log(asset);
     //setUploaded(asset.url)
+    console.log("RETURNING ASSET")
     return asset;
   }
 
@@ -303,7 +305,7 @@ function App() {
     }
     let p = Principal.fromUint8Array(principal._arr)
     //console.log(await nftCanister.getMetadataDip721(receipt.Ok.token_id))
-    await window.ic.plug.agent.fetchRootKey()
+    // await window.ic.plug.agent.fetchRootKey()
     let receipt = await nftCanister.mintDip721(p, [metadata])
     console.log("receipt")
     console.log(receipt)
