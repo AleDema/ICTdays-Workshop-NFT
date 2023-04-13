@@ -258,15 +258,12 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let res = await management_canister_actor.canister_status({
       canister_id = principal;
     });
-    Debug.print(debug_show (res));
     ignore add_controller_to_storage();
     return true;
 
   };
 
   private func add_controller_to_storage() : async () {
-    if (storage_canister_id == "") return;
-
     let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
     let principal = Principal.fromText(storage_canister_id);
     let res = await management_canister_actor.canister_status({
@@ -280,13 +277,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       if (Principal.equal(controller, custodian)) {
         check := false;
       };
-      Debug.print(debug_show (controller));
     };
     if (check) b.add(custodian);
 
     let new_controllers = Buffer.toArray(b);
-    Debug.print(debug_show (new_controllers));
-    Debug.print(debug_show (principal));
     management_canister_actor.update_settings({
       canister_id = principal;
       settings = {
@@ -299,6 +293,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   };
 
   public shared ({ caller }) func init_storage_controllers() : async () {
+    if (storage_canister_id == "") return;
+
     ignore add_controller_to_storage();
   };
 
@@ -339,7 +335,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let res = await management_canister_actor.canister_status({
       canister_id = Principal.fromText(storage_canister_id);
     });
-    Debug.print(debug_show (res));
     return {
       nft_balance = Cycles.balance();
       storage_balance = res.cycles;
