@@ -13,6 +13,8 @@ import Debug "mo:base/Debug";
 import Result "mo:base/Result";
 import FileStorage "../Storage/FileStorage";
 import Cycles "mo:base/ExperimentalCycles";
+import Text "mo:base/Text";
+import Buffer "mo:base/Buffer";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
@@ -210,20 +212,154 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return #ok("custodian");
   };
 
-  private func create_file_storage_canister(isProd : Bool) : async () {
+  type definite_canister_settings = {
+    controllers : [Principal];
+    compute_allocation : Nat;
+    memory_allocation : Nat;
+    freezing_threshold : Nat;
+  };
+
+  type canister_settings = {
+    controllers : ?[Principal];
+    compute_allocation : ?Nat;
+    memory_allocation : ?Nat;
+    freezing_threshold : ?Nat;
+  };
+
+  type ManagementCanisterActor = actor {
+    canister_status : ({ canister_id : Principal }) -> async ({
+      status : { #running; #stopping; #stopped };
+      settings : definite_canister_settings;
+      module_hash : ?Blob;
+      memory_size : Nat;
+      cycles : Nat;
+      idle_cycles_burned_per_day : Nat;
+    });
+
+    update_settings : (
+      {
+        canister_id : Principal;
+        settings : canister_settings;
+      }
+    ) -> ();
+  };
+
+  private func create_file_storage_canister(isProd : Bool) : async Bool {
+    let balance = Cycles.balance();
+    Debug.print("balance");
+    Debug.print(debug_show (balance));
+    if (balance <= CYCLE_AMOUNT) return false;
     Cycles.add(CYCLE_AMOUNT);
     let file_storage_actor = await FileStorage.FileStorage(isProd);
     ignore file_storage_actor.addCustodians(custodians);
     let principal = Principal.fromActor(file_storage_actor);
     storage_canister_id := Principal.toText(principal);
+    let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
+    let res = await management_canister_actor.canister_status({
+      canister_id = principal;
+    });
+    Debug.print(debug_show (res));
+    ignore add_controller_to_storage();
+    return true;
 
   };
 
-  public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Text {
+  private func add_controller_to_storage() : async () {
+    if (storage_canister_id == "") return;
+
+    let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
+    let principal = Principal.fromText(storage_canister_id);
+    let res = await management_canister_actor.canister_status({
+      canister_id = principal;
+    });
+    Debug.print(debug_show (res));
+    let b = Buffer.Buffer<Principal>(1);
+    var check = true;
+    for (controller in res.settings.controllers.vals()) {
+      b.add(controller);
+      if (Principal.equal(controller, custodian)) {
+        check := false;
+      };
+      Debug.print(debug_show (controller));
+    };
+    if (check) b.add(custodian);
+
+    let new_controllers = Buffer.toArray(b);
+    Debug.print(debug_show (new_controllers));
+    Debug.print(debug_show (principal));
+    management_canister_actor.update_settings({
+      canister_id = principal;
+      settings = {
+        controllers = ?new_controllers;
+        compute_allocation = ?res.settings.compute_allocation;
+        memory_allocation = ?res.settings.memory_allocation;
+        freezing_threshold = ?res.settings.freezing_threshold;
+      };
+    });
+  };
+
+  public shared ({ caller }) func init_storage_controllers() : async () {
+    ignore add_controller_to_storage();
+  };
+
+  public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Result.Result<Text, Text> {
     if (storage_canister_id == "") {
-      await create_file_storage_canister(isProd);
+      let res = await create_file_storage_canister(isProd);
+      if (res) { return #ok(storage_canister_id) } else {
+        return #err("Not enough cycles");
+      };
+    };
+    return #ok(storage_canister_id);
+
+  };
+
+  public shared ({ caller }) func set_storage_canister_id(id : Principal) : async Result.Result<Text, Text> {
+
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("not allowed");
     };
 
-    return storage_canister_id;
+    if (not isCanisterPrincipal(id) or isAnonymous(id)) {
+      return #err("invalid principal");
+    };
+
+    storage_canister_id := Principal.toText(id);
+    return #ok("storage_canister_id set");
+  };
+
+  type CanisterStatus = {
+    nft_balance : Nat;
+    storage_balance : Nat;
+    storage_memory_used : Nat;
+    storage_daily_burn : Nat;
+  };
+
+  public shared ({ caller }) func get_storage_status() : async CanisterStatus {
+    let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
+    let res = await management_canister_actor.canister_status({
+      canister_id = Principal.fromText(storage_canister_id);
+    });
+    Debug.print(debug_show (res));
+    return {
+      nft_balance = Cycles.balance();
+      storage_balance = res.cycles;
+      storage_memory_used = res.memory_size;
+      storage_daily_burn = res.idle_cycles_burned_per_day;
+    };
+  };
+
+  private func isAnonymous(caller : Principal) : Bool {
+    Principal.equal(caller, Principal.fromText("2vxsx-fae"));
+  };
+
+  private func isCanisterPrincipal(p : Principal) : Bool {
+    let principal_text = Principal.toText(p);
+    let correct_length = Text.size(principal_text) == 27;
+    let correct_last_characters = Text.endsWith(principal_text, #text "-cai");
+
+    if (Bool.logand(correct_length, correct_last_characters)) {
+      return true;
+    };
+    return false;
   };
 };

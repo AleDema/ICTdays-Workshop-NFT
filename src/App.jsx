@@ -40,6 +40,7 @@ function App() {
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
+  const [cycleAlert, setCycleAlert] = useState(false);
   const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
   const [principal, setPrincipal] = useState(null);
@@ -96,13 +97,12 @@ function App() {
   };
 
   const initActors = async () => {
+    setCycleAlert(false)
     console.log("initActors")
     if (principal === null) return;
     let isProd = true
     if (process.env.DFX_NETWORK !== "ic") {
       isProd = false;
-      //await window.ic.plug.agent.fetchRootKey()
-
     }
 
     const nftCanisterId = process.env.DIP721_CANISTER_ID
@@ -110,16 +110,22 @@ function App() {
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
-    const storageCanisterId = await DIP721.get_storage_canister_id(isProd) //gets storage canister id and if it doesnt exist it creates one
-    console.log(`storageCanisterId: ${storageCanisterId}`)
-    const storageActor = await window.ic.plug.createActor({
-      canisterId: storageCanisterId,
-      interfaceFactory: storageFactory,
-    });
-    console.log(nftActor)
-    console.log(process.env.DIP721_CANISTER_ID)
-    setStorageCanister(storageActor)
-    setNftCanister(nftActor)
+    const res = await DIP721.get_storage_canister_id(isProd) //gets storage canister id and if it doesnt exist it creates one
+    if (res.ok) {
+      const storageCanisterId = res.ok
+      console.log(`storageCanisterId: ${storageCanisterId}`)
+      const storageActor = await window.ic.plug.createActor({
+        canisterId: storageCanisterId,
+        interfaceFactory: storageFactory,
+      });
+      console.log(nftActor)
+      console.log(process.env.DIP721_CANISTER_ID)
+      setStorageCanister(storageActor)
+      setNftCanister(nftActor)
+    } else {
+      //set error if canister doesnt have enough cycles to spin up storage canister, in such cases you should top it up.
+      setCycleAlert(true)
+    }
   }
 
 
@@ -134,6 +140,7 @@ function App() {
     setStorageCanister(null)
     setLoading(null)
     setFile(null)
+    setCycleAlert(false)
     window.ic.plug.sessionManager.disconnect()
 
   }
@@ -380,6 +387,7 @@ function App() {
           </span>
         </a>
       </div>
+      {cycleAlert && <p>WARNING: Not enough cycles to spin up storage canister</p>}
       {nftCanister &&
         <>
           <div
