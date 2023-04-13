@@ -2,12 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import './index.css';
 import motokoLogo from './assets/motoko_moving.png';
 import motokoShadowLogo from './assets/motoko_shadow.png';
-import reactLogo from './assets/react.svg';
-// import { backend } from './declarations/backend';
-// import { storage } from './declarations/storage';
 import { DIP721 } from './declarations/DIP721';
 import { idlFactory as nftFactory } from './declarations/DIP721';
-// import { idlFactory as storageFactory } from './declarations/storage';
 import { idlFactory as storageFactory } from "./lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import Card from './components/Card';
@@ -34,7 +30,6 @@ function App() {
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
-  //const [uploaded, setUploaded] = useState(null);g
   const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
   const [principal, setPrincipal] = useState(null);
@@ -42,9 +37,16 @@ function App() {
   const nftNameField = useRef(null)
 
   const verifyConnection = async () => {
-    // const connected = await window.ic.plug.isConnected();
-
-
+    const connected = await window.ic.plug.isConnected();
+    if (connected) {
+      window.ic.plug.sessionManager.disconnect()
+      // //disconnect()
+      // console.log("isconnected")
+      // let principal = await window.ic.plug.getPrincipal()
+      // setPrincipal(principal)
+      // // //initActors()
+      // return
+    };
     // Whitelist
     const whitelist = [
       process.env.DIP721_CANISTER_ID,
@@ -53,16 +55,18 @@ function App() {
     let host = "https://mainnet.dfinity.network"
     if (process.env.DFX_NETWORK !== "ic") {
       host = "http://127.0.0.1:4943";
+
     }
     console.log("host")
     console.log(process.env.DIP721_CANISTER_ID)
     console.log(host)
     // Callback to print sessionData
     const onConnectionUpdate = async () => {
-      console.log(window.ic.plug.sessionManager.sessionData)
-      let principal = await window.ic.plug.getPrincipal()
-      setPrincipal(Principal.fromUint8Array(principal._arr))
-      initActors()
+      // console.log("onConnectionUpdate")
+      // console.log(window.ic.plug.sessionManager.sessionData)
+      // let principal = await window.ic.plug.getPrincipal()
+      // setPrincipal(principal)
+      //initActors()
     }
     // Make the request
     try {
@@ -83,26 +87,27 @@ function App() {
 
   const initActors = async () => {
     console.log("initActors")
-    console.log(principal)
-
-    if (!principal) return;
+    if (principal === null) return;
     let isProd = true
     if (process.env.DFX_NETWORK !== "ic") {
       isProd = false;
+      //await window.ic.plug.agent.fetchRootKey()
+
     }
-    const storageCanisterId = await DIP721.get_storage_canister_id(isProd) //gets storage canister id and if it doesnt exist it creates one
-    console.log(`storageCanisterId: ${storageCanisterId}`)
-    const storageActor = await window.ic.plug.createActor({
-      canisterId: storageCanisterId,
-      interfaceFactory: storageFactory,
-    });
 
     const nftCanisterId = process.env.DIP721_CANISTER_ID
     const nftActor = await window.ic.plug.createActor({
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
-    // console.log(nftActor)
+    const storageCanisterId = await DIP721.get_storage_canister_id(isProd) //gets storage canister id and if it doesnt exist it creates one
+    console.log(`storageCanisterId: ${storageCanisterId}`)
+    const storageActor = await window.ic.plug.createActor({
+      canisterId: storageCanisterId,
+      interfaceFactory: storageFactory,
+    });
+    console.log(nftActor)
+    console.log(process.env.DIP721_CANISTER_ID)
     setStorageCanister(storageActor)
     setNftCanister(nftActor)
   }
@@ -271,6 +276,8 @@ function App() {
       data: []
     }
     let p = Principal.fromUint8Array(principal._arr)
+    //console.log(await nftCanister.getMetadataDip721(receipt.Ok.token_id))
+    await window.ic.plug.agent.fetchRootKey()
     let receipt = await nftCanister.mintDip721(p, [metadata])
     console.log("receipt")
     console.log(receipt)
@@ -295,19 +302,16 @@ function App() {
 
   const fetchData = async () => {
 
-    console.log(`principal ${principal}`)
-    console.log(nftCanister)
-    if (!nftCanister || !principal) return
+    // console.log(`principal ${principal}`)
+    // console.log("nftCanister")
+    // console.log(nftCanister)
+    if (nftCanister === null || !principal === null) return
     const ids = await nftCanister.getTokenIdsForUserDip721(principal)
-    const nfts = []
-    ids.forEach(async function (item, index) {
-      //console.log(item, index);
+    const newNfts = await Promise.all(ids.map(async (item) => {
       let value = await nftCanister.getMetadataDip721(item)
-      nfts.push(value.Ok)
-    });
-    console.log("fetch nfts")
-    console.log(nfts)
-    setNfts((oldnfts) => { return nfts })
+      return value.Ok
+    }))
+    setNfts(newNfts)
   }
 
   useEffect(() => {
@@ -319,7 +323,7 @@ function App() {
 
 
   return (
-    <div className="bg-gray-900 w-screen h-screen flex flex-col  ">
+    <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
       <div className="self-end p-8 ">
         {principal && <button onClick={disconnect}>Disconnect</button>}
         {!principal && <button onClick={connect}>Connect</button>}
@@ -359,18 +363,20 @@ function App() {
             {error && <p>{error}</p>}
             {loading && <p>Minting NFT...</p>}
             <div className="flex flex-row flex-wrap">
-              {nfts.map((e, i) => {
-                let name, url;
-                //console.log(e)
-                e[0].key_val_data.forEach((item, index) => {
-                  if (item.key == "name") name = item.val.TextContent;
-                  if (item.key == "location") url = item.val.TextContent;
+              {
+                nfts.map((e, i) => {
+                  let name, url;
+                  console.log("rerender");
+                  //console.log(e)
+                  e[0].key_val_data.forEach((item, index) => {
+                    if (item.key == "name") name = item.val.TextContent;
+                    if (item.key == "location") url = item.val.TextContent;
 
-                })
-                return (
-                  <Card key={url} name={name} url={url}></Card>
-                )
-              })}
+                  })
+                  return (
+                    <Card key={url} name={name} url={url}></Card>
+                  )
+                })}
             </div>
           </div>
         </>

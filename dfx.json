@@ -10,10 +10,6 @@
             "type": "motoko",
             "main": "backend/DIP721/Main.mo"
         },
-        "storage": {
-            "type": "motoko",
-            "main": "backend/Storage/FileStorage.mo"
-        },
         "frontend": {
             "type": "assets",
             "frontend": {

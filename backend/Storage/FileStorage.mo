@@ -71,6 +71,7 @@ shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 
 	public shared ({ caller }) func addCustodians(custodians_list : List.List<Principal>) : async Result.Result<Text, Text> {
 		Debug.print(debug_show (caller));
+		Debug.print("addCustodians");
 		if (not isCustodian(caller)) {
 			return #err("not custodian");
 		};
@@ -120,14 +121,14 @@ shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 		var content_size = 0;
 
 		for (chunk in chunks.vals()) {
-			Debug.print(debug_show (caller));
-			Debug.print(debug_show (chunk.owner));
-			Debug.print(debug_show (Principal.equal(chunk.owner, caller)));
-			if (not Principal.equal(chunk.owner, caller)) {
-				return #err("Unathorized chunk access");
-			};
+			// Debug.print(debug_show (caller));
+			// Debug.print(debug_show (chunk.owner));
+			// Debug.print(debug_show (Principal.equal(chunk.owner, caller)));
+			// if (not Principal.equal(chunk.owner, caller)) {
+			//   return #err("Unathorized chunk access");
+			// };
 
-			if (chunk.batch_id == batch_id) {
+			if (Principal.equal(chunk.owner, caller) and chunk.batch_id == batch_id) {
 				chunks_to_commit.add(chunk);
 			};
 		};
