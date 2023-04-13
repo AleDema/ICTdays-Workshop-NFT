@@ -380,7 +380,7 @@ function App() {
           </span>
         </a>
       </div>
-      {principal &&
+      {nftCanister &&
         <>
           <div
             onDrop={handleDrop}
