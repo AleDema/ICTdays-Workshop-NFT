@@ -25,6 +25,16 @@ async function getUint8Array(file) {
 }
 
 
+const isSupportedType = (type) => {
+  console.log(type)
+  const types = ['image', 'audio', 'audio', 'video']
+  for (let e of types) {
+    if (e === type.split('/')[0])
+      return true
+  }
+  return false;
+}
+
 function App() {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
@@ -225,6 +235,16 @@ function App() {
     return asset;
   }
 
+  const transferNft = async (id, address) => {
+    console.log(address)
+    console.log(id)
+    let receipt = await nftCanister.transferFromDip721(principal, Principal.fromText(address), id)
+    if (!receipt.Ok) return;
+    setNfts((oldNfts) => {
+      return oldNfts.filter((item, i) => item.token_id !== id);
+    })
+  }
+
   const mintNft = async () => {
     setError(null)
     if (!nftCanister) {
@@ -235,6 +255,12 @@ function App() {
     if (file == null) {
       console.log("No File selected")
       setError("No File selected")
+      return
+    }
+
+    if (!isSupportedType(file.type)) {
+      console.log("Unsupported File Type")
+      setError("Unsupported File Type")
       return
     }
     //upload image
@@ -293,7 +319,9 @@ function App() {
       console.log(receipt.Ok)
       console.log(receipt.Ok.token_id)
       let newNft = await nftCanister.getMetadataDip721(receipt.Ok.token_id)
+      console.log(newNft)
       setNfts((oldNfts) => {
+        newNft.Ok.token_id = receipt.Ok.token_id
         return [newNft.Ok, ...oldNfts]
       })
     }
@@ -309,8 +337,10 @@ function App() {
     const ids = await nftCanister.getTokenIdsForUserDip721(principal)
     const newNfts = await Promise.all(ids.map(async (item) => {
       let value = await nftCanister.getMetadataDip721(item)
+      value.Ok.token_id = item
       return value.Ok
     }))
+    console.log(newNfts)
     setNfts(newNfts)
   }
 
@@ -319,7 +349,12 @@ function App() {
       fetchData();
     }
     init()
+    const intervalId = setInterval(async () => {
+      fetchData()
+    }, 10000);
+    return () => clearInterval(intervalId);
   }, [nftCanister, principal]);
+
 
 
   return (
@@ -354,7 +389,7 @@ function App() {
           >
             <div>
               <p>Nft Name:</p>
-              <input type="text" id="nftname" name="nftname" ref={nftNameField} placeholder="Hello ICTdays" />
+              <input type="text" id="nftname" name="nftname" ref={nftNameField} placeholder="NFT Name" />
             </div>
             <input type="file" onChange={handleFileUpload} />
             <div className="flex flex-row justify-center items-center">
@@ -365,16 +400,16 @@ function App() {
             <div className="flex flex-row flex-wrap">
               {
                 nfts.map((e, i) => {
-                  let name, url;
+                  let name, url, mimeType;
                   console.log("rerender");
                   //console.log(e)
                   e[0].key_val_data.forEach((item, index) => {
                     if (item.key == "name") name = item.val.TextContent;
-                    if (item.key == "location") url = item.val.TextContent;
-
+                    else if (item.key == "location") url = item.val.TextContent;
+                    else if (item.key == "contentType") mimeType = item.val.TextContent;
                   })
                   return (
-                    <Card key={url} name={name} url={url}></Card>
+                    <Card tokenId={e.token_id} mimeType={mimeType} key={url} name={name} url={url} transfer={transferNft}></Card>
                   )
                 })}
             </div>
