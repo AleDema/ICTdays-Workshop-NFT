@@ -292,10 +292,11 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     });
   };
 
-  public shared ({ caller }) func init_storage_controllers() : async () {
-    if (storage_canister_id == "") return;
+  public shared ({ caller }) func init_storage_controllers() : async Result.Result<Text, Text> {
+    if (storage_canister_id == "") return #err("No storage canister");
 
     ignore add_controller_to_storage();
+    return #ok("Done");
   };
 
   public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Result.Result<Text, Text> {
@@ -328,19 +329,24 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     storage_balance : Nat;
     storage_memory_used : Nat;
     storage_daily_burn : Nat;
+    controllers : [Principal];
   };
 
-  public shared ({ caller }) func get_storage_status() : async CanisterStatus {
+  public shared ({ caller }) func get_storage_status() : async Result.Result<CanisterStatus, Text> {
+    if (storage_canister_id == "") return #err("No storage canister");
+
     let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
     let res = await management_canister_actor.canister_status({
       canister_id = Principal.fromText(storage_canister_id);
     });
-    return {
+    Debug.print(debug_show (res.settings.controllers));
+    return #ok({
       nft_balance = Cycles.balance();
       storage_balance = res.cycles;
       storage_memory_used = res.memory_size;
       storage_daily_burn = res.idle_cycles_burned_per_day;
-    };
+      controllers = res.settings.controllers;
+    });
   };
 
   private func isAnonymous(caller : Principal) : Bool {

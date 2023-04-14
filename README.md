@@ -19,4 +19,11 @@ Public repo for the boilerplate code used in the ICTdays ICP presentation
 - dfx canister --network ic install frontend
 - dfx canister --network ic deposit-cycles 1000000000000 canister_name //In case you need to top up a canister
 - dfx canister --network ic status  5aui7-6qaaa-aaaap-qba2a-cai
-- IMPORTANT: if you need to upgrade a canister use  dfx canister --network ic install mode=upgrade instead of mode=reinstall or you'll lose the canister state and the storage canister reference with it.
+- IMPORTANT: if you need to upgrade a canister use  dfx canister --network ic install --mode upgrade instead of mode=reinstall or you'll lose the canister state and the storage canister reference with it.
+
+dfx canister call DIP721 set_storage_canister_id \
+"(
+  principal\"canister_principal\", 
+)"
+
+dfx canister call DIP721 init_storage_controllers
