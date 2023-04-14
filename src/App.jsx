@@ -131,7 +131,7 @@ function App() {
           setCycleAlert(true)
         }
       }
-    }, 1000);
+    }, 6000);
   }
 
 
