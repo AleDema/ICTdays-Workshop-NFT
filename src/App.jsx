@@ -68,9 +68,8 @@ function App() {
       host = "http://127.0.0.1:4943";
 
     }
-    console.log("host")
+    console.log(`Network: ${host}`)
     console.log(process.env.DIP721_CANISTER_ID)
-    console.log(host)
     // Callback to print sessionData
     const onConnectionUpdate = async () => {
       // console.log("onConnectionUpdate")
@@ -110,6 +109,7 @@ function App() {
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
+    //Check in a loop in case the storage canister has been initialized by someone else but still hasn't resolved the id
     let intervalId = setInterval(async function () {
       const res = await DIP721.get_storage_canister_id(isProd);//gets storage canister id and if it doesnt exist it creates one
       if (res.ok) {
@@ -374,7 +374,7 @@ function App() {
     <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
       <div className="self-end p-8 ">
         {principal && <button onClick={disconnect}>Disconnect</button>}
-        {!principal && <button onClick={connect}>Connect</button>}
+        {!principal && <button onClick={connect}>Connect Plug</button>}
       </div>
       <div className="flex flex-row justify-center items-center">
         <a
