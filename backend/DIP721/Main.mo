@@ -173,7 +173,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
       return #Err(#Unauthorized);
     };
-    // Debug.print(debug_show (caller));
     let newId = Nat64.fromNat(List.size(nfts));
     let nft : Types.Nft = {
       owner = to;
@@ -189,6 +188,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       id = transactionId;
     });
   };
+
+  /////////////////ADMIN////////////////////////////////////
 
   public shared ({ caller }) func isCustodian() : async Text {
     // Debug.print(debug_show (caller));
@@ -244,20 +245,33 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     ) -> ();
   };
 
+  stable var isCreating = false;
+  type CreationError = {
+    #notenoughcycles;
+    #awaiting_id;
+  };
+  public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Result.Result<Text, CreationError> {
+    if (isCreating) #err(#awaiting_id);
+    if (storage_canister_id == "" and not isCreating) {
+      isCreating := true;
+      let res = await create_file_storage_canister(isProd);
+      isCreating := false;
+      if (res) { return #ok(storage_canister_id) } else {
+        return #err(#notenoughcycles);
+      };
+    };
+    return #ok(storage_canister_id);
+
+  };
   private func create_file_storage_canister(isProd : Bool) : async Bool {
     let balance = Cycles.balance();
-    Debug.print("balance");
-    Debug.print(debug_show (balance));
     if (balance <= CYCLE_AMOUNT) return false;
+
     Cycles.add(CYCLE_AMOUNT);
     let file_storage_actor = await FileStorage.FileStorage(isProd);
     ignore file_storage_actor.addCustodians(custodians);
     let principal = Principal.fromActor(file_storage_actor);
     storage_canister_id := Principal.toText(principal);
-    let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
-    let res = await management_canister_actor.canister_status({
-      canister_id = principal;
-    });
     ignore add_controller_to_storage();
     return true;
 
@@ -299,17 +313,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return #ok("Done");
   };
 
-  public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Result.Result<Text, Text> {
-    if (storage_canister_id == "") {
-      let res = await create_file_storage_canister(isProd);
-      if (res) { return #ok(storage_canister_id) } else {
-        return #err("Not enough cycles");
-      };
-    };
-    return #ok(storage_canister_id);
-
-  };
-
   public shared ({ caller }) func set_storage_canister_id(id : Principal) : async Result.Result<Text, Text> {
 
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
@@ -332,7 +335,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     controllers : [Principal];
   };
 
-  public shared ({ caller }) func get_storage_status() : async Result.Result<CanisterStatus, Text> {
+  public shared ({ caller }) func get_status() : async Result.Result<CanisterStatus, Text> {
     if (storage_canister_id == "") return #err("No storage canister");
 
     let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");

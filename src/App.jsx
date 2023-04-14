@@ -110,22 +110,28 @@ function App() {
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
-    const res = await DIP721.get_storage_canister_id(isProd) //gets storage canister id and if it doesnt exist it creates one
-    if (res.ok) {
-      const storageCanisterId = res.ok
-      console.log(`storageCanisterId: ${storageCanisterId}`)
-      const storageActor = await window.ic.plug.createActor({
-        canisterId: storageCanisterId,
-        interfaceFactory: storageFactory,
-      });
-      console.log(nftActor)
-      console.log(process.env.DIP721_CANISTER_ID)
-      setStorageCanister(storageActor)
-      setNftCanister(nftActor)
-    } else {
-      //set error if canister doesnt have enough cycles to spin up storage canister, in such cases you should top it up.
-      setCycleAlert(true)
-    }
+    let intervalId = setInterval(async function () {
+      const res = await DIP721.get_storage_canister_id(isProd);//gets storage canister id and if it doesnt exist it creates one
+      if (res.ok) {
+        clearInterval(intervalId)
+        const storageCanisterId = res.ok
+        console.log(`storageCanisterId: ${storageCanisterId}`)
+        const storageActor = await window.ic.plug.createActor({
+          canisterId: storageCanisterId,
+          interfaceFactory: storageFactory,
+        });
+        console.log(nftActor)
+        console.log(process.env.DIP721_CANISTER_ID)
+        setStorageCanister(storageActor)
+        setNftCanister(nftActor)
+      } else {
+        //set error if canister doesnt have enough cycles to spin up storage canister, in such cases you should top it up.
+        if (res.err.notenoughcycles === null) {
+          clearInterval(intervalId)
+          setCycleAlert(true)
+        }
+      }
+    }, 1000);
   }
 
 
@@ -144,10 +150,6 @@ function App() {
     window.ic.plug.sessionManager.disconnect()
 
   }
-
-  useEffect(() => {
-    initActors()
-  }, [principal]);
 
   function handleFileUpload(event) {
     const selectedFile = event.target.files[0];
@@ -364,7 +366,9 @@ function App() {
     return () => clearInterval(intervalId);
   }, [nftCanister, principal]);
 
-
+  useEffect(() => {
+    initActors()
+  }, [principal]);
 
   return (
     <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
@@ -407,30 +411,34 @@ function App() {
             </div>
             {error && <p>{error}</p>}
             {loading && <p>Minting NFT...</p>}
-            <div className="flex flex-row flex-wrap">
-              {
-                nfts.map((e, i) => {
-                  let name, url, mimeType;
-                  console.log("rerender");
-                  //console.log(e)
-                  e[0].key_val_data.forEach((item, index) => {
-                    if (item.key == "name") name = item.val.TextContent;
-                    else if (item.key == "location") url = item.val.TextContent;
-                    else if (item.key == "contentType") mimeType = item.val.TextContent;
+            {nfts.length > 0 ? (
+              <div className="flex flex-row flex-wrap">
+                {
+                  nfts.map((e, i) => {
+                    let name, url, mimeType;
+                    console.log("rerender");
+                    //console.log(e)
+                    e[0].key_val_data.forEach((item, index) => {
+                      if (item.key == "name") name = item.val.TextContent;
+                      else if (item.key == "location") url = item.val.TextContent;
+                      else if (item.key == "contentType") mimeType = item.val.TextContent;
+                    })
+                    return (
+                      <Card tokenId={e.token_id} mimeType={mimeType} key={url} name={name} url={url} transfer={transferNft}></Card>
+                    )
                   })
-                  return (
-                    <Card tokenId={e.token_id} mimeType={mimeType} key={url} name={name} url={url} transfer={transferNft}></Card>
-                  )
-                })}
-            </div>
+                }
+              </div>) : (<div>You don't have any NFTs</div>)}
           </div>
         </>
       }
 
-      {!principal && <>
-        <p>Login to interact...</p>
-      </>}
-    </div>
+      {
+        !principal && <>
+          <p>Login to interact...</p>
+        </>
+      }
+    </div >
   );
 }
 
