@@ -50,13 +50,7 @@ function App() {
   const verifyConnection = async () => {
     const connected = await window.ic.plug.isConnected();
     if (connected) {
-      window.ic.plug.sessionManager.disconnect()
-      // //disconnect()
-      // console.log("isconnected")
-      // let principal = await window.ic.plug.getPrincipal()
-      // setPrincipal(principal)
-      // // //initActors()
-      // return
+      disconnect()
     };
     // Whitelist
     const whitelist = [
@@ -72,7 +66,8 @@ function App() {
     console.log(process.env.DIP721_CANISTER_ID)
     // Callback to print sessionData
     const onConnectionUpdate = async () => {
-      // console.log("onConnectionUpdate")
+      console.log("onConnectionUpdate")
+      disconnect()
       // console.log(window.ic.plug.sessionManager.sessionData)
       // let principal = await window.ic.plug.getPrincipal()
       // setPrincipal(principal)
@@ -93,11 +88,30 @@ function App() {
     }
     let principal = await window.ic.plug.getPrincipal()
     setPrincipal(principal)
+    //initActors()
   };
+
+
+  const connect = () => {
+    verifyConnection()
+  }
+
+  const disconnect = async () => {
+    //clean up state
+    setPrincipal(null)
+    setNftCanister(null)
+    setStorageCanister(null)
+    setLoading(null)
+    setFile(null)
+    setCycleAlert(false)
+    setNfts([])
+    window.ic.plug.sessionManager.disconnect()
+
+  }
 
   const initActors = async () => {
     setCycleAlert(false)
-    console.log("initActors")
+    console.log("Init Actors")
     if (principal === null) return;
     let isProd = true
     if (process.env.DFX_NETWORK !== "ic") {
@@ -115,13 +129,13 @@ function App() {
       if (res.ok) {
         clearInterval(intervalId)
         const storageCanisterId = res.ok
-        console.log(`storageCanisterId: ${storageCanisterId}`)
+        console.log(`Storage Canister ID: ${storageCanisterId}`)
         const storageActor = await window.ic.plug.createActor({
           canisterId: storageCanisterId,
           interfaceFactory: storageFactory,
         });
-        console.log(nftActor)
-        console.log(process.env.DIP721_CANISTER_ID)
+        //console.log(nftActor)
+        console.log(`NFT Canister ID: ${process.env.DIP721_CANISTER_ID}`)
         setStorageCanister(storageActor)
         setNftCanister(nftActor)
       } else {
@@ -132,23 +146,6 @@ function App() {
         }
       }
     }, 6000);
-  }
-
-
-  const connect = () => {
-    verifyConnection()
-  }
-
-  const disconnect = async () => {
-    //clean up state
-    setPrincipal(null)
-    setNftCanister(null)
-    setStorageCanister(null)
-    setLoading(null)
-    setFile(null)
-    setCycleAlert(false)
-    window.ic.plug.sessionManager.disconnect()
-
   }
 
   function handleFileUpload(event) {
@@ -247,8 +244,7 @@ function App() {
   }
 
   const transferNft = async (id, address) => {
-    console.log(address)
-    console.log(id)
+    console.log(`Transfer to: ${address} NFT with id: ${id}`)
     let receipt = await nftCanister.transferFromDip721(principal, Principal.fromText(address), id)
     if (!receipt.Ok) return;
     setNfts((oldNfts) => {
@@ -351,6 +347,7 @@ function App() {
       value.Ok.token_id = item
       return value.Ok
     }))
+    console.log("NFTs:")
     console.log(newNfts)
     setNfts(newNfts)
   }
@@ -362,7 +359,7 @@ function App() {
     init()
     const intervalId = setInterval(async () => {
       fetchData()
-    }, 10000);
+    }, 15000);
     return () => clearInterval(intervalId);
   }, [nftCanister, principal]);
 
@@ -416,7 +413,6 @@ function App() {
                 {
                   nfts.map((e, i) => {
                     let name, url, mimeType;
-                    console.log("rerender");
                     //console.log(e)
                     e[0].key_val_data.forEach((item, index) => {
                       if (item.key == "name") name = item.val.TextContent;
@@ -436,6 +432,12 @@ function App() {
       {
         !principal && <>
           <p>Login to interact...</p>
+        </>
+      }
+
+      {
+        storageCanister === null && principal && <>
+          <p>Retrieving Data...</p>
         </>
       }
     </div >
