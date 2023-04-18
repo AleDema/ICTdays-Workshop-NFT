@@ -8,6 +8,7 @@ Public repo for the boilerplate code used in the ICTdays ICP presentation
 - update admin in .mo files (search TODO to find them easily)
 - npm run setup
 - npm run start
+- add localnet in plug settings
 
 ## dfx commands to deploy on mainnet
 - dfx wallet --network ic balance //Check if you have enough cycles

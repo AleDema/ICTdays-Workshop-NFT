@@ -27,7 +27,7 @@ module {
   public func generate_asset_url(args : GenerateAssetUrlArgs) : Text {
     var url = Text.join(
       "",
-      (["https://", args.canister_id, ".raw.ic0.app", "/asset/", args.asset_id].vals()),
+      (["https://", args.canister_id, ".raw.icp0.io", "/asset/", args.asset_id].vals()),
     );
 
     if (args.is_prod == false) {

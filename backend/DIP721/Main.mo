@@ -30,10 +30,9 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     logo_type = "img";
     data = "";
   };
-  stable var name : Text = "NFT Name";
+  stable var name : Text = "ICTdays NFT";
   stable var symbol : Text = "ICT";
   stable var maxLimit : Nat16 = 100;
-  let IS_PROD : Bool = true;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
 
   stable var storage_canister_id : Text = "";
@@ -192,8 +191,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   /////////////////ADMIN////////////////////////////////////
 
   public shared ({ caller }) func isCustodian() : async Text {
-    // Debug.print(debug_show (caller));
-    // Debug.print(debug_show (custodians));
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
       return "not custodian";
     };
