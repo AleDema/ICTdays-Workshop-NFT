@@ -369,9 +369,14 @@ function App() {
 
   return (
     <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
-      <div className="self-end p-8 ">
-        {principal && <button onClick={disconnect}>Disconnect</button>}
-        {!principal && <button onClick={connect}>Connect Plug</button>}
+      <div className="flex flex-row">
+        <div className="self-start p-8 ">
+          <h1>UniTN Minter</h1>
+        </div>
+        <div className="self-end p-8 ml-auto">
+          {principal && <button onClick={disconnect}>Disconnect</button>}
+          {!principal && <button onClick={connect}>Connect Plug</button>}
+        </div>
       </div>
       <div className="flex flex-row justify-center items-center">
         <a
@@ -402,7 +407,10 @@ function App() {
               <p>Nft Name:</p>
               <input type="text" id="nftname" name="nftname" ref={nftNameField} placeholder="NFT Name" />
             </div>
-            <input type="file" onChange={handleFileUpload} />
+            <div className="flex flex-row justify-center items-center">
+              <p>Upload your file:</p>
+              <input className="m-8" type="file" onChange={handleFileUpload} />
+            </div>
             <div className="flex flex-row justify-center items-center">
               <button onClick={mintNft}>Mint NFT</button>
             </div>
@@ -424,7 +432,7 @@ function App() {
                     )
                   })
                 }
-              </div>) : (<div>You don't have any NFTs</div>)}
+              </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)}
           </div>
         </>
       }
