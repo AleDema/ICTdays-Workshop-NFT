@@ -403,7 +403,7 @@ function App() {
             onDragLeave={handleDragLeave}
             className={ dragging ? 'dragging' : ''}
           >
-            <div className='flex flex-col items-center justify-center gap-6 max-w-md mx-auto'>
+            <div className='flex flex-col items-center justify-center gap-6 max-w-md mx-auto mb-10'>
               <div className='flex flex-col items-start gap-2 w-full'>
                 <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="NFT Name" />
                 <p className='text-[12px] font-thin opacity-70'>Insert the name of your NFT</p>
@@ -414,13 +414,17 @@ function App() {
                 <p className='text-[12px] font-thin opacity-70'>Choose the file to upload</p>
               </div>
 
-              <div className="flex flex-row justify-center items-center">
-                <button className='bg-[#0C93EA]' onClick={mintNft}>Mint NFT</button>
+              <div className="flex flex-row justify-center items-center w-full">
+                <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button>
               </div>
               {error && <p>{error}</p>}
               {loading && <p>Minting NFT...</p>}
-              {nfts.length > 0 ? (
-                <div className="flex flex-row flex-wrap">
+
+            </div>
+              
+            {
+              nfts.length > 0 ? (
+                <div className="flex flex-row flex-wrap px-10">
                   {
                     nfts.map((e, i) => {
                       let name, url, mimeType;
@@ -435,8 +439,8 @@ function App() {
                       )
                     })
                   }
-                </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)}
-              </div>
+                </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)
+            }  
           </div>
         </>
       }
