@@ -368,7 +368,7 @@ function App() {
   }, [principal]);
 
   return (
-    <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
+    <div className="bg-gray-900 w-screen h-[90vh] flex flex-col overflow-auto ">
       <div className="flex flex-row">
         <div className="self-start p-8 font-bold">
           <h1>UniTN Minter</h1>

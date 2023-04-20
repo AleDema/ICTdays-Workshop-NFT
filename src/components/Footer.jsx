@@ -1,0 +1,36 @@
+import React from 'react'
+
+function Footer() {
+
+    return (
+      <div className='w-screen flex flex-col items-center justify-center bg-gray-900 pb-10'>
+        <img src="/dfinity_logo.png" alt="DFINITY Logo" className='max-w-[200px]' />
+
+        <div className='flex flex-row items-center justify-between max-w-2xl w-full mx-auto'>
+
+          <a href="https://t.me/ICP_Italia" target='_blank' className='text-white flex flex-row items-center gap-2'>
+            <img src='/telegram.png' alt="Telegram" className='h-[24px]' />
+            ICP Italia
+          </a>
+
+          <a href="https://dfinity.org/" target='_blank' className='text-white flex flex-row items-center gap-2'>
+            <img src='/dfinity_logo.png' alt="DFINITY" className='h-[24px]' />
+            DFINITY Foundation
+          </a>
+
+          <a href="https://smartcontracts.org/" target='_blank' className='text-white flex flex-row items-center gap-2'>
+            <img src='/dfinity_logo.png' alt="DFINITY" className='h-[24px]' />
+            Smart Contracts
+          </a>
+
+          <a href="https://internetcomputer.org/" target='_blank' className='text-white flex flex-row items-center gap-2'>
+            <img src='/dfinity_logo.png' alt="DFINITY" className='h-[24px]' />
+            Internet Computer
+          </a>
+
+        </div>
+      </div>
+    )
+}
+
+export default Footer
