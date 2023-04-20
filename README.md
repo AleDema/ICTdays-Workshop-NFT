@@ -24,5 +24,18 @@ Public repo for the boilerplate code used in the ICTdays ICP presentation
 - dfx canister --network ic deposit-cycles 1000000000000 canister_name //In case you need to top up a canister
 - dfx canister --network ic status  5aui7-6qaaa-aaaap-qba2a-cai
 - IMPORTANT: if you need to upgrade a canister use  dfx canister --network ic install --mode upgrade instead of mode=reinstall or you'll lose the canister state and the storage canister reference with it.
-- Once you have deployed your canister on mainnet you can join this DAO: https://wzd4v-iaaaa-aaaap-qbbfa-cai.ic0.app/
-- To register just login with plug and insert the canister id of your minter (DIP721 canister), it can be found in the canister_ids.json file in your project.
+
+## How to access the ICTdays DAO
+
+ Once you have deployed your canister on mainnet you can join this DAO: https://wzd4v-iaaaa-aaaap-qbbfa-cai.ic0.app/
+
+  To register login with plug on that page and insert the canister id of your minter (DIP721 canister), it can be found in the canister_ids.json file in your project.
+it will look something like this:
+
+`
+  "DIP721": {
+    "ic": "362pf-fiaaa-aaaap-qbaoq-cai"
+  },
+`
+
+you only need this part: `362pf-fiaaa-aaaap-qbaoq-cai`
