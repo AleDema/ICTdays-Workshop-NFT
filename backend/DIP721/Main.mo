@@ -249,7 +249,17 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     #notenoughcycles;
     #awaitingid;
   };
-  public shared ({ caller }) func get_storage_canister_id(isProd : Bool) : async Result.Result<Text, CreationError> {
+
+  public query func get_storage_canister_id() : async Result.Result<Text, { #awaitingid; #nostorageid }> {
+    if (isCreating) return #err(#awaitingid);
+    if (storage_canister_id == "" and not isCreating) {
+      return #err(#nostorageid);
+    };
+    return #ok(storage_canister_id);
+
+  };
+
+  public shared ({ caller }) func create_storage_canister(isProd : Bool) : async Result.Result<Text, CreationError> {
     if (isCreating) return #err(#awaitingid);
     if (storage_canister_id == "" and not isCreating) {
       isCreating := true;

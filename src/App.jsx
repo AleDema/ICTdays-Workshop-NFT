@@ -109,6 +109,35 @@ function App() {
 
   }
 
+  const createStorageActor = async (id) => {
+    const storageCanisterId = id
+    console.log(`Storage Canister ID: ${storageCanisterId}`)
+    const storageActor = await window.ic.plug.createActor({
+      canisterId: storageCanisterId,
+      interfaceFactory: storageFactory,
+    });
+    //console.log(nftActor)
+    console.log(`NFT Canister ID: ${process.env.DIP721_CANISTER_ID}`)
+    setStorageCanister(storageActor)
+  }
+
+  async function fetchId() {
+    return new Promise((resolve, reject) => {
+      let intervalId = setInterval(async () => {
+        const res = await DIP721.get_storage_canister_id();
+        if (res.ok) {
+          clearInterval(intervalId);
+          resolve(res.ok)
+        }
+
+        // if (res.err) {
+        //   clearInterval(intervalId);
+        //   reject(res.err)
+        // }
+      }, 500);
+    });
+  }
+
   const initActors = async () => {
     setCycleAlert(false)
     console.log("Init Actors")
@@ -123,29 +152,39 @@ function App() {
       canisterId: nftCanisterId,
       interfaceFactory: nftFactory,
     });
-    //Check in a loop in case the storage canister has been initialized by someone else but still hasn't resolved the id
-    let intervalId = setInterval(async function () {
-      const res = await DIP721.get_storage_canister_id(isProd);//gets storage canister id and if it doesnt exist it creates one
-      if (res.ok) {
-        clearInterval(intervalId)
-        const storageCanisterId = res.ok
-        console.log(`Storage Canister ID: ${storageCanisterId}`)
-        const storageActor = await window.ic.plug.createActor({
-          canisterId: storageCanisterId,
-          interfaceFactory: storageFactory,
-        });
-        //console.log(nftActor)
-        console.log(`NFT Canister ID: ${process.env.DIP721_CANISTER_ID}`)
-        setStorageCanister(storageActor)
+
+    const res = await DIP721.get_storage_canister_id();//gets storage canister id and if it doesnt exist it creates one
+    if (res.ok) {
+      createStorageActor(res.ok)
+      setNftCanister(nftActor)
+    } else if (res.err.nostorageid === null) {
+      const res1 = await DIP721.create_storage_canister(isProd);//gets storage canister id and if it doesnt exist it creates one
+      if (res1.ok) {
+        createStorageActor(res1.ok)
         setNftCanister(nftActor)
-      } else {
-        //set error if canister doesnt have enough cycles to spin up storage canister, in such cases you should top it up.
-        if (res.err.notenoughcycles === null) {
-          clearInterval(intervalId)
-          setCycleAlert(true)
-        }
+      } else if (res.err.awaitingid === null) {
+        fetchId()
+          .then(id => {
+            console.log(`The valid id is ${id}`);
+            createStorageActor(id)
+            setNftCanister(nftActor)
+          })
+          .catch(error => {
+            console.error(`Error fetching the id: ${error}`);
+          });
+      } else if (res.err.notenoughcycles === null) {
+        setCycleAlert(true)
       }
-    }, 6000);
+    } else if (res.err.awaitingid === null) {
+      fetchId()
+        .then(id => {
+          createStorageActor(id)
+          setNftCanister(nftActor)
+        })
+        .catch(error => {
+          console.error(`Error fetching the id: ${error}`);
+        });
+    }
   }
 
   function handleFileUpload(event) {
@@ -401,7 +440,7 @@ function App() {
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
-            className={ dragging ? 'dragging' : ''}
+            className={dragging ? 'dragging' : ''}
           >
             <div className='flex flex-col items-center justify-center gap-6 max-w-md mx-auto mb-10'>
               <div className='flex flex-col items-start gap-2 w-full'>
@@ -421,7 +460,7 @@ function App() {
               {loading && <p>Minting NFT...</p>}
 
             </div>
-              
+
             {
               nfts.length > 0 ? (
                 <div className="flex flex-row flex-wrap px-10">
@@ -440,7 +479,7 @@ function App() {
                     })
                   }
                 </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)
-            }  
+            }
           </div>
         </>
       }
