@@ -1,10 +1,5 @@
 {
     "dfx": "0.13.1",
-    "defaults": {
-        "build": {
-            "packtool": "npm run --silent sources"
-        }
-    },
     "canisters": {
         "DIP721": {
             "type": "motoko",

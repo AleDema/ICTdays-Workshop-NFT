@@ -12,7 +12,7 @@
     "deploy": "dfx deploy",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\" \"backend/**/*.mo\"",
     "sources": "mops sources",
-    "postinstall": "mops install"
+    "postinstall": ""
   },
   "dependencies": {
     "localforage": "^1.10.0",
