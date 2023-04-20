@@ -368,9 +368,9 @@ function App() {
   }, [principal]);
 
   return (
-    <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
+    <div className="bg-gray-900 w-screen h-[90vh] flex flex-col overflow-auto ">
       <div className="flex flex-row">
-        <div className="self-start p-8 ">
+        <div className="self-start p-8 font-bold">
           <h1>UniTN Minter</h1>
         </div>
         <div className="self-end p-8 ml-auto">
@@ -401,38 +401,46 @@ function App() {
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
-            className={dragging ? 'dragging' : ''}
+            className={ dragging ? 'dragging' : ''}
           >
-            <div>
-              <p>Nft Name:</p>
-              <input type="text" id="nftname" name="nftname" ref={nftNameField} placeholder="NFT Name" />
+            <div className='flex flex-col items-center justify-center gap-6 max-w-md mx-auto mb-10'>
+              <div className='flex flex-col items-start gap-2 w-full'>
+                <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="NFT Name" />
+                <p className='text-[12px] font-thin opacity-70'>Insert the name of your NFT</p>
+              </div>
+
+              <div className="flex flex-col items-start gap-2 w-full">
+                <input className="w-full" type="file" onChange={handleFileUpload} />
+                <p className='text-[12px] font-thin opacity-70'>Choose the file to upload</p>
+              </div>
+
+              <div className="flex flex-row justify-center items-center w-full">
+                <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button>
+              </div>
+              {error && <p>{error}</p>}
+              {loading && <p>Minting NFT...</p>}
+
             </div>
-            <div className="flex flex-row justify-center items-center">
-              <p>Upload your file:</p>
-              <input className="m-8" type="file" onChange={handleFileUpload} />
-            </div>
-            <div className="flex flex-row justify-center items-center">
-              <button onClick={mintNft}>Mint NFT</button>
-            </div>
-            {error && <p>{error}</p>}
-            {loading && <p>Minting NFT...</p>}
-            {nfts.length > 0 ? (
-              <div className="flex flex-row flex-wrap">
-                {
-                  nfts.map((e, i) => {
-                    let name, url, mimeType;
-                    //console.log(e)
-                    e[0].key_val_data.forEach((item, index) => {
-                      if (item.key == "name") name = item.val.TextContent;
-                      else if (item.key == "location") url = item.val.TextContent;
-                      else if (item.key == "contentType") mimeType = item.val.TextContent;
+              
+            {
+              nfts.length > 0 ? (
+                <div className="flex flex-row flex-wrap px-10">
+                  {
+                    nfts.map((e, i) => {
+                      let name, url, mimeType;
+                      //console.log(e)
+                      e[0].key_val_data.forEach((item, index) => {
+                        if (item.key == "name") name = item.val.TextContent;
+                        else if (item.key == "location") url = item.val.TextContent;
+                        else if (item.key == "contentType") mimeType = item.val.TextContent;
+                      })
+                      return (
+                        <Card tokenId={e.token_id} mimeType={mimeType} key={url} name={name} url={url} transfer={transferNft}></Card>
+                      )
                     })
-                    return (
-                      <Card tokenId={e.token_id} mimeType={mimeType} key={url} name={name} url={url} transfer={transferNft}></Card>
-                    )
-                  })
-                }
-              </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)}
+                  }
+                </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)
+            }  
           </div>
         </>
       }
