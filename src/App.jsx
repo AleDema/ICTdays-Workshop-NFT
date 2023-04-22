@@ -7,6 +7,7 @@ import { idlFactory as nftFactory } from './declarations/DIP721';
 import { idlFactory as storageFactory } from "./lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import Card from './components/Card';
+import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect } from "@connect2ic/react"
 
 
 async function getUint8Array(file) {
@@ -35,7 +36,7 @@ const isSupportedType = (type) => {
   return false;
 }
 
-function App() {
+function App(props) {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -43,9 +44,22 @@ function App() {
   const [cycleAlert, setCycleAlert] = useState(false);
   const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
-  const [principal, setPrincipal] = useState(null);
+  const [user_principal, setPrincipal] = useState(null);
   const [nfts, setNfts] = useState([]);
+  const [test, setTest] = useState("default");
   const nftNameField = useRef(null)
+  const { isConnected, principal, activeProvider } = useConnect({
+    onConnect: () => {
+      // Signed in
+      console.log("test")
+    },
+    onDisconnect: () => {
+      // Signed out
+      console.log("onDisconnect")
+    }
+  })
+
+
 
   const verifyConnection = async () => {
     const connected = await window.ic.plug.isConnected();
@@ -69,8 +83,8 @@ function App() {
       console.log("onConnectionUpdate")
       disconnect()
       // console.log(window.ic.plug.sessionManager.sessionData)
-      // let principal = await window.ic.plug.getPrincipal()
-      // setPrincipal(principal)
+      // let user_principal = await window.ic.plug.getPrincipal()
+      // setPrincipal(user_principal)
       //initActors()
     }
     // Make the request
@@ -86,8 +100,8 @@ function App() {
     } catch (e) {
       console.log(e);
     }
-    let principal = await window.ic.plug.getPrincipal()
-    setPrincipal(principal)
+    let user_principal = await window.ic.plug.getPrincipal()
+    setPrincipal(user_principal)
     //initActors()
   };
 
@@ -141,7 +155,7 @@ function App() {
   const initActors = async () => {
     setCycleAlert(false)
     console.log("Init Actors")
-    if (principal === null) return;
+    if (user_principal === null) return;
     let isProd = true
     if (process.env.DFX_NETWORK !== "ic") {
       isProd = false;
@@ -284,7 +298,7 @@ function App() {
 
   const transferNft = async (id, address) => {
     console.log(`Transfer to: ${address} NFT with id: ${id}`)
-    let receipt = await nftCanister.transferFromDip721(principal, Principal.fromText(address), id)
+    let receipt = await nftCanister.transferFromDip721(user_principal, Principal.fromText(address), id)
     if (!receipt.Ok) return;
     setNfts((oldNfts) => {
       return oldNfts.filter((item, i) => item.token_id !== id);
@@ -347,7 +361,7 @@ function App() {
       ],
       data: []
     }
-    let p = Principal.fromUint8Array(principal._arr)
+    let p = Principal.fromUint8Array(user_principal._arr)
     //console.log(await nftCanister.getMetadataDip721(receipt.Ok.token_id))
     // await window.ic.plug.agent.fetchRootKey()
     let receipt = await nftCanister.mintDip721(p, [metadata])
@@ -376,11 +390,11 @@ function App() {
 
   const fetchData = async () => {
 
-    // console.log(`principal ${principal}`)
+    // console.log(`user_principal ${user_principal}`)
     // console.log("nftCanister")
     // console.log(nftCanister)
-    if (nftCanister === null || !principal === null) return
-    const ids = await nftCanister.getTokenIdsForUserDip721(principal)
+    if (nftCanister === null || !user_principal === null) return
+    const ids = await nftCanister.getTokenIdsForUserDip721(user_principal)
     const newNfts = await Promise.all(ids.map(async (item) => {
       let value = await nftCanister.getMetadataDip721(item)
       value.Ok.token_id = item
@@ -400,11 +414,21 @@ function App() {
       fetchData()
     }, 15000);
     return () => clearInterval(intervalId);
-  }, [nftCanister, principal]);
+  }, [nftCanister, user_principal]);
 
   useEffect(() => {
     initActors()
-  }, [principal]);
+  }, [user_principal]);
+
+  useEffect(() => {
+    let isMobile = navigator.userAgent.match(/(iPhone|iPod|iPad|Android|BlackBerry|webOS)/);
+    let isDesktop = !isMobile;
+    console.log(isDesktop)
+    console.log(props.defaultProviders)
+    console.log(JSON.stringify(props.defaultProviders))
+    setTest(JSON.stringify(props.defaultProviders))
+  }, []);
+
 
   return (
     <div className="bg-gray-900 w-screen h-[90vh] flex flex-col overflow-auto ">
@@ -413,8 +437,10 @@ function App() {
           <h1>UniTN Minter</h1>
         </div>
         <div className="self-end p-8 ml-auto">
-          {principal && <button onClick={disconnect}>Disconnect</button>}
-          {!principal && <button onClick={connect}>Connect Plug</button>}
+          {user_principal && <button onClick={disconnect}>Disconnect</button>}
+          {!user_principal && <button onClick={connect}>Connect Plug</button>}
+          <ConnectButton />
+          <ConnectDialog />
         </div>
       </div>
       <div className="flex flex-row justify-center items-center">
@@ -485,13 +511,14 @@ function App() {
       }
 
       {
-        !principal && <>
+        !user_principal && <>
           <p>Login to interact...</p>
+          <p>{test}</p>
         </>
       }
 
       {
-        storageCanister === null && principal && <>
+        storageCanister === null && user_principal && <>
           <p>Retrieving Data...</p>
         </>
       }

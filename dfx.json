@@ -1,11 +1,20 @@
 {
-    "dfx": "0.13.1",
+    "dfx": "0.12.1",
     "canisters": {
         "DIP721": {
             "type": "motoko",
             "main": "backend/DIP721/Main.mo"
         },
         "frontend": {
+            "type": "assets",
+            "frontend": {
+                "entrypoint": "dist/index.html"
+            },
+            "source": [
+                "dist/"
+            ]
+        },
+        "frontend2": {
             "type": "assets",
             "frontend": {
                 "entrypoint": "dist/index.html"
