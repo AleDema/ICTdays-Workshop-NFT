@@ -6,8 +6,8 @@ import { DIP721 } from './declarations/DIP721';
 import { idlFactory as storageFactory } from "./lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import Card from './components/Card';
+import EventCard from './components/EventCard';
 import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
-
 
 async function getUint8Array(file) {
   const arrayBuffer = await new Promise((resolve, reject) => {
@@ -41,10 +41,8 @@ function App(props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
   const [cycleAlert, setCycleAlert] = useState(false);
-  //const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
   const [isCustodian, setIsCustodian] = useState(false);
-  //const [principal, setUserPrincipal] = useState(null);
   const [nfts, setNfts] = useState([]);
   const [events, setEvents] = useState([]);
   const nftNameField = useRef(null)
@@ -66,8 +64,6 @@ function App(props) {
 
   const disconnect = async () => {
     //clean up state
-    //setUserPrincipal(null)
-    //setNftCanister(null)
     setStorageCanister(null)
     setIsCustodian(false)
     setLoading(null)
@@ -252,6 +248,11 @@ function App(props) {
   }
 
   const createEventNft = async () => {
+    console.log(eventStartField.current.value)
+    const startUnixTimestamp = Date.parse(eventStartField.current.value)
+    console.log(startUnixTimestamp);
+    const endUnixTimestamp = Date.parse(eventEndField.current.value)
+    console.log(endUnixTimestamp);
     setError(null)
     if (!nftCanister) {
       console.log("Init error!")
@@ -274,7 +275,7 @@ function App(props) {
     const onChainFile = await uploadImage()
     if (!onChainFile) return;
 
-    nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", })
+    nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", limit: [], startDate: [], endDate: [] })
     setLoading(false)
   }
 
@@ -375,8 +376,9 @@ function App(props) {
     console.log(newNfts)
     setNfts(newNfts)
     const events = await nftCanister.getEvents();
+    console.log(events)
     if (events.ok) {
-      setEvents(events);
+      setEvents(events.ok);
     }
   }
 
@@ -447,10 +449,16 @@ function App(props) {
                 <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftUrlField} placeholder="NFT URL" />
                 <p className='text-[12px] font-thin opacity-70'>Alternatively insert the image URL</p>
               </div>
-              <input ref={eventStartField} type="date" id="start" name="event-start"
-                min="2018-01-01"></input>
-              <input ref={eventEndField} type="date" id="start" name="event-end"
-              ></input>
+              <div className="flex flex-row gap-1">
+                <p className='text-[12px] font-thin opacity-70'>Start Date</p>
+                <input ref={eventStartField} type="date" id="start" name="event-start"
+                  min="2018-01-01"></input>
+              </div>
+              <div className="flex flex-row gap-1">
+                <p className='text-[12px] font-thin opacity-70'>End Date</p>
+                <input ref={eventEndField} type="date" id="start" name="event-end"
+                ></input>
+              </div>
 
               <div className="flex flex-row justify-center items-center w-full">
                 {/* <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button> */}
@@ -487,7 +495,9 @@ function App(props) {
                   {
                     events.map((e, i) => {
                       return (
-                        <p>{e.nftName}</p>
+                        <>
+                          <EventCard tokenId={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl}></EventCard>
+                        </>
                       )
                     })
                   }

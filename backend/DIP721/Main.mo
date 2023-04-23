@@ -26,8 +26,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   type Event = {
     id : Text;
     nftName : Text;
-    startDate : Nat;
-    endDate : Nat;
+    startDate : ?Nat;
+    endDate : ?Nat;
     nftType : Text;
     nftUrl : Text;
     limit : ?Nat;
@@ -250,6 +250,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
     let fuzz = Fuzz.Fuzz();
     let eventId = fuzz.text.randomAscii(16);
+    Debug.print(debug_show (eventData));
     ignore Map.put(events, thash, eventId, { eventData with id = eventId });
     return #ok(eventId);
   };
