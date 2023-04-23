@@ -3,11 +3,10 @@ import './index.css';
 import motokoLogo from './assets/motoko_moving.png';
 import motokoShadowLogo from './assets/motoko_shadow.png';
 import { DIP721 } from './declarations/DIP721';
-import { idlFactory as nftFactory } from './declarations/DIP721';
 import { idlFactory as storageFactory } from "./lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import Card from './components/Card';
-import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect } from "@connect2ic/react"
+import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
 
 
 async function getUint8Array(file) {
@@ -42,97 +41,48 @@ function App(props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
   const [cycleAlert, setCycleAlert] = useState(false);
-  const [nftCanister, setNftCanister] = useState(null);
+  //const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
-  const [user_principal, setPrincipal] = useState(null);
+  const [isCustodian, setIsCustodian] = useState(false);
+  //const [principal, setUserPrincipal] = useState(null);
   const [nfts, setNfts] = useState([]);
-  const [test, setTest] = useState("default");
+  const [events, setEvents] = useState([]);
   const nftNameField = useRef(null)
+  const nftUrlField = useRef(null)
+  const eventStartField = useRef(null)
+  const eventEndField = useRef(null)
+  const [nftCanister] = useCanister("DIP721")
   const { isConnected, principal, activeProvider } = useConnect({
     onConnect: () => {
       // Signed in
-      console.log("test")
+      console.log("onConnect")
     },
     onDisconnect: () => {
       // Signed out
       console.log("onDisconnect")
+      disconnect()
     }
   })
 
-
-
-  const verifyConnection = async () => {
-    const connected = await window.ic.plug.isConnected();
-    if (connected) {
-      disconnect()
-    };
-    // Whitelist
-    const whitelist = [
-      process.env.DIP721_CANISTER_ID,
-    ];
-
-    let host = "https://mainnet.dfinity.network"
-    if (process.env.DFX_NETWORK !== "ic") {
-      host = "http://127.0.0.1:4943";
-
-    }
-    console.log(`Network: ${host}`)
-    console.log(process.env.DIP721_CANISTER_ID)
-    // Callback to print sessionData
-    const onConnectionUpdate = async () => {
-      console.log("onConnectionUpdate")
-      disconnect()
-      // console.log(window.ic.plug.sessionManager.sessionData)
-      // let user_principal = await window.ic.plug.getPrincipal()
-      // setPrincipal(user_principal)
-      //initActors()
-    }
-    // Make the request
-    try {
-      const publicKey = await window.ic.plug.requestConnect({
-        whitelist,
-        host,
-        onConnectionUpdate,
-        timeout: 50000
-      });
-
-      console.log(`The connected user's public key is:`, publicKey);
-    } catch (e) {
-      console.log(e);
-    }
-    let user_principal = await window.ic.plug.getPrincipal()
-    setPrincipal(user_principal)
-    //initActors()
-  };
-
-
-  const connect = () => {
-    verifyConnection()
-  }
-
   const disconnect = async () => {
     //clean up state
-    setPrincipal(null)
-    setNftCanister(null)
+    //setUserPrincipal(null)
+    //setNftCanister(null)
     setStorageCanister(null)
+    setIsCustodian(false)
     setLoading(null)
     setFile(null)
     setCycleAlert(false)
     setNfts([])
-    window.ic.plug.sessionManager.disconnect()
-
   }
 
   const createStorageActor = async (id) => {
     const storageCanisterId = id
     console.log(`Storage Canister ID: ${storageCanisterId}`)
-    const storageActor = await window.ic.plug.createActor({
-      canisterId: storageCanisterId,
-      interfaceFactory: storageFactory,
-    });
+    const storageActor = await activeProvider.createActor(storageCanisterId, storageFactory)
     //console.log(nftActor)
     console.log(`NFT Canister ID: ${process.env.DIP721_CANISTER_ID}`)
-    setStorageCanister(storageActor)
+    setStorageCanister(storageActor.value)
   }
 
   async function fetchId() {
@@ -143,11 +93,6 @@ function App(props) {
           clearInterval(intervalId);
           resolve(res.ok)
         }
-
-        // if (res.err) {
-        //   clearInterval(intervalId);
-        //   reject(res.err)
-        // }
       }, 500);
     });
   }
@@ -155,33 +100,30 @@ function App(props) {
   const initActors = async () => {
     setCycleAlert(false)
     console.log("Init Actors")
-    if (user_principal === null) return;
+    console.log(principal)
+    if (principal === null || principal === undefined) return;
     let isProd = true
     if (process.env.DFX_NETWORK !== "ic") {
       isProd = false;
     }
-
-    const nftCanisterId = process.env.DIP721_CANISTER_ID
-    const nftActor = await window.ic.plug.createActor({
-      canisterId: nftCanisterId,
-      interfaceFactory: nftFactory,
-    });
-
+    let check = await nftCanister.isCustodian();
+    if (!check) return;
+    setIsCustodian(check)
     const res = await DIP721.get_storage_canister_id();//gets storage canister id and if it doesnt exist it creates one
     if (res.ok) {
       createStorageActor(res.ok)
-      setNftCanister(nftActor)
+      //setNftCanister(nftActor)
     } else if (res.err.nostorageid === null) {
       const res1 = await DIP721.create_storage_canister(isProd);//gets storage canister id and if it doesnt exist it creates one
       if (res1.ok) {
         createStorageActor(res1.ok)
-        setNftCanister(nftActor)
+        //setNftCanister(nftActor)
       } else if (res.err.awaitingid === null) {
         fetchId()
           .then(id => {
             console.log(`The valid id is ${id}`);
             createStorageActor(id)
-            setNftCanister(nftActor)
+            //setNftCanister(nftActor)
           })
           .catch(error => {
             console.error(`Error fetching the id: ${error}`);
@@ -193,7 +135,7 @@ function App(props) {
       fetchId()
         .then(id => {
           createStorageActor(id)
-          setNftCanister(nftActor)
+          //setNftCanister(nftActor)
         })
         .catch(error => {
           console.error(`Error fetching the id: ${error}`);
@@ -243,7 +185,7 @@ function App(props) {
     let batch_id = Math.random().toString(36).substring(2, 7);
 
     const uploadChunk = async ({ chunk, order }) => {
-      // console.log(storageCanister)
+      console.log(storageCanister)
       // console.log(storage)
       console.log("UPLOADING CHUNKS")
       return storageCanister.create_chunk(batch_id, Array.from(chunk), order);
@@ -298,17 +240,48 @@ function App(props) {
 
   const transferNft = async (id, address) => {
     console.log(`Transfer to: ${address} NFT with id: ${id}`)
-    let receipt = await nftCanister.transferFromDip721(user_principal, Principal.fromText(address), id)
+    let receipt = await nftCanister.transferFromDip721(principal, Principal.fromText(address), id)
     if (!receipt.Ok) return;
     setNfts((oldNfts) => {
       return oldNfts.filter((item, i) => item.token_id !== id);
     })
   }
 
+  const claimNft = async () => {
+    let res = await nftCanister.claimEventNft()
+  }
+
+  const createEventNft = async () => {
+    setError(null)
+    if (!nftCanister) {
+      console.log("Init error!")
+      return
+    }
+
+    if (file == null) {
+      console.log("No File selected")
+      setError("No File selected")
+      return
+    }
+
+    if (!isSupportedType(file.type)) {
+      console.log("Unsupported File Type")
+      setError("Unsupported File Type")
+      return
+    }
+    //upload image
+    setLoading(true)
+    const onChainFile = await uploadImage()
+    if (!onChainFile) return;
+
+    nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", })
+    setLoading(false)
+  }
+
   const mintNft = async () => {
     setError(null)
     if (!nftCanister) {
-      console.log("init error!")
+      console.log("Init error!")
       return
     }
 
@@ -361,9 +334,8 @@ function App(props) {
       ],
       data: []
     }
-    let p = Principal.fromUint8Array(user_principal._arr)
+    let p = Principal.fromText(principal)
     //console.log(await nftCanister.getMetadataDip721(receipt.Ok.token_id))
-    // await window.ic.plug.agent.fetchRootKey()
     let receipt = await nftCanister.mintDip721(p, [metadata])
     console.log("receipt")
     console.log(receipt)
@@ -389,12 +361,11 @@ function App(props) {
   }
 
   const fetchData = async () => {
-
-    // console.log(`user_principal ${user_principal}`)
+    // console.log(`principal ${principal}`)
     // console.log("nftCanister")
     // console.log(nftCanister)
-    if (nftCanister === null || !user_principal === null) return
-    const ids = await nftCanister.getTokenIdsForUserDip721(user_principal)
+    if (nftCanister === null || principal === undefined) return
+    const ids = await nftCanister.getTokenIdsForUserDip721(Principal.fromText(principal))
     const newNfts = await Promise.all(ids.map(async (item) => {
       let value = await nftCanister.getMetadataDip721(item)
       value.Ok.token_id = item
@@ -403,6 +374,10 @@ function App(props) {
     console.log("NFTs:")
     console.log(newNfts)
     setNfts(newNfts)
+    const events = await nftCanister.getEvents();
+    if (events.ok) {
+      setEvents(events);
+    }
   }
 
   useEffect(() => {
@@ -414,31 +389,21 @@ function App(props) {
       fetchData()
     }, 15000);
     return () => clearInterval(intervalId);
-  }, [nftCanister, user_principal]);
+  }, [nftCanister, principal]);
 
   useEffect(() => {
+    console.log("principal changed")
+    console.log(principal)
     initActors()
-  }, [user_principal]);
-
-  useEffect(() => {
-    let isMobile = navigator.userAgent.match(/(iPhone|iPod|iPad|Android|BlackBerry|webOS)/);
-    let isDesktop = !isMobile;
-    console.log(isDesktop)
-    console.log(props.defaultProviders)
-    console.log(JSON.stringify(props.defaultProviders))
-    setTest(JSON.stringify(props.defaultProviders))
-  }, []);
-
+  }, [principal]);
 
   return (
     <div className="bg-gray-900 w-screen h-[90vh] flex flex-col overflow-auto ">
       <div className="flex flex-row">
         <div className="self-start p-8 font-bold">
-          <h1>UniTN Minter</h1>
+          <h1>Blockchain Week Minter</h1>
         </div>
         <div className="self-end p-8 ml-auto">
-          {user_principal && <button onClick={disconnect}>Disconnect</button>}
-          {!user_principal && <button onClick={connect}>Connect Plug</button>}
           <ConnectButton />
           <ConnectDialog />
         </div>
@@ -459,7 +424,7 @@ function App(props) {
         </a>
       </div>
       {cycleAlert && <p>WARNING: Not enough cycles to spin up storage canister</p>}
-      {nftCanister &&
+      {principal !== undefined && nftCanister !== null && isCustodian &&
         <>
           <div
             onDrop={handleDrop}
@@ -470,17 +435,27 @@ function App(props) {
           >
             <div className='flex flex-col items-center justify-center gap-6 max-w-md mx-auto mb-10'>
               <div className='flex flex-col items-start gap-2 w-full'>
-                <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="NFT Name" />
-                <p className='text-[12px] font-thin opacity-70'>Insert the name of your NFT</p>
+                <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="Event Name" />
+                <p className='text-[12px] font-thin opacity-70'>Insert the name of your event</p>
               </div>
 
               <div className="flex flex-col items-start gap-2 w-full">
                 <input className="w-full" type="file" onChange={handleFileUpload} />
                 <p className='text-[12px] font-thin opacity-70'>Choose the file to upload</p>
               </div>
+              <div className='flex flex-col items-start gap-2 w-full'>
+                <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftUrlField} placeholder="NFT URL" />
+                <p className='text-[12px] font-thin opacity-70'>Alternatively insert the image URL</p>
+              </div>
+              <input ref={eventStartField} type="date" id="start" name="event-start"
+                min="2018-01-01"></input>
+              <input ref={eventEndField} type="date" id="start" name="event-end"
+              ></input>
 
               <div className="flex flex-row justify-center items-center w-full">
-                <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button>
+                {/* <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button> */}
+                <button className='bg-[#0C93EA] w-full' onClick={createEventNft}>Create Event NFT</button>
+                <button className='bg-[#0C93EA] w-full' onClick={claimNft}>Claim NFT</button>
               </div>
               {error && <p>{error}</p>}
               {loading && <p>Minting NFT...</p>}
@@ -500,25 +475,36 @@ function App(props) {
                         else if (item.key == "contentType") mimeType = item.val.TextContent;
                       })
                       return (
-                        <Card tokenId={e.token_id} mimeType={mimeType} key={url} name={name} url={url} transfer={transferNft}></Card>
+                        <Card tokenId={e.token_id} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft}></Card>
                       )
                     })
                   }
                 </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)
+            }
+            {
+              events.length > 0 ? (
+                <div className="flex flex-row flex-wrap px-10">
+                  {
+                    events.map((e, i) => {
+                      return (
+                        <p>{e.nftName}</p>
+                      )
+                    })
+                  }
+                </div>) : (<div className="flex justify-center items-center" >You haven't created any events</div>)
             }
           </div>
         </>
       }
 
       {
-        !user_principal && <>
+        principal === undefined && <>
           <p>Login to interact...</p>
-          <p>{test}</p>
         </>
       }
 
       {
-        storageCanister === null && user_principal && <>
+        isCustodian && storageCanister === null && principal && <>
           <p>Retrieving Data...</p>
         </>
       }

@@ -15,12 +15,35 @@ import FileStorage "../Storage/FileStorage";
 import Cycles "mo:base/ExperimentalCycles";
 import Text "mo:base/Text";
 import Buffer "mo:base/Buffer";
+import Blob "mo:base/Blob";
+import Map "mo:map/Map";
+import Fuzz "mo:fuzz";
+import Prim "mo:prim";
+import Iter "mo:base/Iter";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
+
+  type Event = {
+    id : Text;
+    nftName : Text;
+    startDate : Nat;
+    endDate : Nat;
+    nftType : Text;
+    nftUrl : Text;
+    limit : ?Nat;
+  };
   stable var transactionId : Types.TransactionId = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
+  let { ihash; nhash; thash; phash; calcHash } = Map;
+  stable let events = Map.new<Text, Event>(thash);
+  let pthash : Map.HashUtils<(Principal, Text)> = (
+    func(key) = (Prim.hashBlob(Prim.blobOfPrincipal(key.0)) +% Prim.hashBlob(Prim.encodeUtf8(key.1))) & 0x3fffffff,
+    func(a, b) = a.0 == b.0 and a.1 == b.1,
+    func() = (Prim.principalOfBlob(""), ""),
+  );
+  stable let eventsByPrincipal = Map.new<(Principal, Text), Nat64>(pthash);
   //TODO: add your plug principal here
   custodians := List.push(Principal.fromText("2mz3w-mvsyl-7jyy5-utujh-r3l4n-ww3dm-esjgl-igmix-of4f5-susxa-pqe"), custodians);
   custodians := List.push(Principal.fromText("m2eif-say6u-qkqyb-x57ff-apqcy-phss6-f3k55-5wynb-l3qq5-u4lge-qqe"), custodians);
@@ -168,6 +191,116 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == user });
     let tokenIds = List.map(items, func(item : Types.Nft) : Types.TokenId { item.id });
     return List.toArray(tokenIds);
+  };
+
+  let eventMetadata = [{
+    purpose = #Rendered;
+    key_val_data = [
+      {
+        key = "name";
+        val = #TextContent("Hello Blockchain Week");
+      },
+      {
+        key = "contentType";
+        val = #TextContent("image/gif");
+      },
+      {
+        key = "locationType";
+        val = #TextContent("url");
+      },
+      {
+        key = "location";
+        val = #TextContent("http://jcuhx-tqeaq-aaaaa-aaaaa-c.localhost:4943/asset/3d11a4f5-172-ffc-a11-96d5d70a1081");
+      },
+
+    ];
+    data = Blob.fromArray([]);
+  }];
+
+  private func getEventMetadata(name : Text, fileType : Text, url : Text) : Types.MetadataDesc {
+    return [{
+      purpose = #Rendered;
+      key_val_data = [
+        {
+          key = "name";
+          val = #TextContent(name);
+        },
+        {
+          key = "contentType";
+          val = #TextContent(fileType);
+        },
+        {
+          key = "locationType";
+          val = #TextContent("url");
+        },
+        {
+          key = "location";
+          val = #TextContent(url);
+        },
+
+      ];
+      data = Blob.fromArray([]);
+    }];
+  };
+
+  public shared ({ caller }) func createEventNft(eventData : Event) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not authorized");
+    };
+
+    let fuzz = Fuzz.Fuzz();
+    let eventId = fuzz.text.randomAscii(16);
+    ignore Map.put(events, thash, eventId, { eventData with id = eventId });
+    return #ok(eventId);
+  };
+
+  public shared ({ caller }) func getEvents() : async Result.Result<[Event], Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not Authorized");
+    };
+    let iter = Map.vals<Text, Event>(events);
+    return #ok(Iter.toArray(iter));
+  };
+
+  public shared ({ caller }) func claimEventNft(id : Text) : async Result.Result<Text, Text> {
+
+    // get event metadata
+    var nftName = "ERROR";
+    var nftType = "ERROR";
+    var nftUrl = "ERROR";
+    switch (Map.get(events, thash, id)) {
+      case (?exists) {
+        nftName := exists.nftName;
+        nftType := exists.nftType;
+        nftUrl := exists.nftUrl;
+      };
+      case (null) {
+        return #err("No such event");
+      };
+    };
+    //check timeframe
+
+    //check if user has already redeemed
+    let check = Map.get(eventsByPrincipal, pthash, (caller, id));
+    switch (check) {
+      case (?exists) {
+        return #err("Already redeemed");
+      };
+      case (null) {
+        let newId = Nat64.fromNat(List.size(nfts));
+        let nft : Types.Nft = {
+          owner = caller;
+          id = newId;
+          metadata = getEventMetadata(nftName, nftType, nftUrl);
+        };
+
+        nfts := List.push(nft, nfts);
+
+        transactionId += 1;
+        ignore Map.put(eventsByPrincipal, pthash, (caller, id), newId);
+        return #ok(Nat64.toText(newId));
+      };
+    };
   };
 
   public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {

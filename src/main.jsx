@@ -6,9 +6,20 @@ import { defaultProviders } from "@connect2ic/core/providers"
 import { createClient } from "@connect2ic/core"
 import { Connect2ICProvider } from "@connect2ic/react"
 import "@connect2ic/core/style.css"
+import * as DIP721 from "../.dfx/local/canisters/DIP721"
 
+let host = "https://mainnet.dfinity.network"
+if (process.env.DFX_NETWORK !== "ic") {
+  host = "http://127.0.0.1:4943";
+
+}
+console.log(`Network: ${host}`)
+console.log(process.env.DIP721_CANISTER_ID)
 
 const client = createClient({
+  canisters: {
+    DIP721
+  },
   providers: defaultProviders,
   globalProviderConfig: {
     // host: 'http://localhost:3000',
@@ -18,7 +29,7 @@ const client = createClient({
     // ledgerHost: "http://localhost:8000",
     // whitelist: ["ryjl3-tyaaa-aaaaa-aaaba-cai"],
     // delegationModes:['global'],
-    whitelist: ['3xzez-taaaa-aaaap-qbapa-cai', "362pf-fiaaa-aaaap-qbaoq-cai"],
+    whitelist: [process.env.DIP721_CANISTER_ID, process.env.FRONTEND_CANISTER_ID],
   },
 })
 
