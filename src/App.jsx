@@ -5,9 +5,19 @@ import motokoShadowLogo from './assets/motoko_shadow.png';
 import { DIP721 } from './declarations/DIP721';
 import { idlFactory as storageFactory } from "./lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
+import RootLayout from './layouts/RootLayout';
 import Card from './components/Card';
 import EventCard from './components/EventCard';
+import ErrorPage from './pages/ErrorPage';
+import AdminPage from './pages/AdminPage';
+import RedeemPage from './pages/RedeemPage';
+import ClaimPage from './pages/ClaimPage';
 import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
+import {
+  createRoutesFromElements, Link, createBrowserRouter,
+  RouterProvider,
+  Route
+} from "react-router-dom";
 
 async function getUint8Array(file) {
   const arrayBuffer = await new Promise((resolve, reject) => {
@@ -181,7 +191,7 @@ function App(props) {
     let batch_id = Math.random().toString(36).substring(2, 7);
 
     const uploadChunk = async ({ chunk, order }) => {
-      console.log(storageCanister)
+      //console.log(storageCanister)
       // console.log(storage)
       console.log("UPLOADING CHUNKS")
       return storageCanister.create_chunk(batch_id, Array.from(chunk), order);
@@ -469,7 +479,7 @@ function App(props) {
               {loading && <p>Minting NFT...</p>}
 
             </div>
-
+            <h2>NFTS</h2>
             {
               nfts.length > 0 ? (
                 <div className="flex flex-row flex-wrap px-10">
@@ -489,14 +499,16 @@ function App(props) {
                   }
                 </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)
             }
+            <h2>Events</h2>
             {
               events.length > 0 ? (
                 <div className="flex flex-row flex-wrap px-10">
                   {
                     events.map((e, i) => {
+                      console.log(e.id)
                       return (
                         <>
-                          <EventCard tokenId={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl}></EventCard>
+                          <EventCard id={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl}></EventCard>
                         </>
                       )
                     })
@@ -522,4 +534,16 @@ function App(props) {
   );
 }
 
-export default App;
+const router = createBrowserRouter(createRoutesFromElements(
+  <Route path="/" element={<RootLayout />} errorElement={<ErrorPage />}>
+    <Route index element={<App />} />
+    <Route path="/redeemcoupon/:id" element={<RedeemPage />} />
+    <Route path="/claimnft/:id" element={<ClaimPage />} />
+    <Route path="/admin" element={<AdminPage />} />
+  </Route>
+));
+
+
+export default () => (
+  <RouterProvider router={router} />
+)

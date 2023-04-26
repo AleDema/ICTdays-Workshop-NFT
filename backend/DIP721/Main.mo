@@ -249,7 +249,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
 
     let fuzz = Fuzz.Fuzz();
-    let eventId = fuzz.text.randomAscii(16);
+    let eventId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (eventData));
     ignore Map.put(events, thash, eventId, { eventData with id = eventId });
     return #ok(eventId);

@@ -92,6 +92,8 @@ shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 	};
 
 	public shared ({ caller }) func create_chunk(batch_id : Text, content : Blob, order : Nat) : async Nat {
+		Debug.print("create_chunk");
+		Debug.print(debug_show (canMint(caller)));
 		if (not canMint(caller)) return 0;
 		chunk_id_count := chunk_id_count + 1;
 
@@ -297,7 +299,7 @@ shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 					http_request_streaming_callback : shared () -> async ();
 				};
 
-				return ?#Callback({
+				return ? #Callback({
 					token;
 					callback = canister.http_request_streaming_callback;
 				});
