@@ -463,7 +463,7 @@ function AdminPage(props) {
                             </div>
                         </div>
                         <div>
-                            <div className='flex flex-col items-center justify-center gap-6 max-w-md mx-auto mb-10'>
+                            <div className='flex flex-col items-top justify-center gap-6 max-w-md mx-auto mb-10'>
                                 <div className='flex flex-col items-start gap-2 w-full'>
                                     <input type="number" id="couponamount" name="nftcouponamountname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="Coupon Amount" />
                                     <p className='text-[12px] font-thin opacity-70'>Coupon Amount</p>

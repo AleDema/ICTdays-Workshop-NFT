@@ -21,6 +21,9 @@ import Fuzz "mo:fuzz";
 import Prim "mo:prim";
 import Iter "mo:base/Iter";
 import Timer "mo:base/Timer";
+import ICRCTypes "../ledger/Types";
+import Int "mo:base/Int";
+import Int64 "mo:base/Int64";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
 
@@ -33,12 +36,28 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     nftUrl : Text;
     limit : ?Nat;
   };
+
+  type CouponStates = {
+    #active;
+    #frozen;
+    #redeemed;
+  };
+
+  type Coupon = {
+    id : Text;
+    startDate : ?Nat;
+    endDate : ?Nat;
+    amount : Nat;
+    state : CouponStates;
+  };
   stable var transactionId : Types.TransactionId = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
   let { ihash; nhash; thash; phash; calcHash } = Map;
   stable let events = Map.new<Text, Event>(thash);
+  stable let coupons = Map.new<Text, Coupon>(thash);
+  stable var outstandingCouponsBalance = 0;
   let pthash : Map.HashUtils<(Principal, Text)> = (
     func(key) = (Prim.hashBlob(Prim.blobOfPrincipal(key.0)) +% Prim.hashBlob(Prim.encodeUtf8(key.1))) & 0x3fffffff,
     func(a, b) = a.0 == b.0 and a.1 == b.1,
@@ -60,11 +79,17 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var symbol : Text = "ICT";
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
+  let CKBTC_FEE : Nat = 10;
+  let IS_PROD = false;
+  //TODO: update when deploying on mainnet
+  let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
+  var icrc_principal = "rno2w-sqaaa-aaaaa-aaacq-cai";
+  if (IS_PROD) {
+    icrc_principal := main_ledger_principal;
+  };
+  let ledger_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
 
   stable var storage_canister_id : Text = "";
-  //stable var storage_canister : Types.StorageType = actor (storage_canister_id);
-
-  // https://forum.dfinity.org/t/is-there-any-address-0-equivalent-at-dfinity-motoko/5445/3
   let null_address : Principal = Principal.fromText("aaaaa-aa");
 
   public query func balanceOfDip721(user : Principal) : async Nat64 {
@@ -194,30 +219,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return List.toArray(tokenIds);
   };
 
-  let eventMetadata = [{
-    purpose = #Rendered;
-    key_val_data = [
-      {
-        key = "name";
-        val = #TextContent("Hello Blockchain Week");
-      },
-      {
-        key = "contentType";
-        val = #TextContent("image/gif");
-      },
-      {
-        key = "locationType";
-        val = #TextContent("url");
-      },
-      {
-        key = "location";
-        val = #TextContent("http://jcuhx-tqeaq-aaaaa-aaaaa-c.localhost:4943/asset/3d11a4f5-172-ffc-a11-96d5d70a1081");
-      },
-
-    ];
-    data = Blob.fromArray([]);
-  }];
-
   private func getEventMetadata(name : Text, fileType : Text, url : Text) : Types.MetadataDesc {
     return [{
       purpose = #Rendered;
@@ -242,6 +243,117 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       ];
       data = Blob.fromArray([]);
     }];
+  };
+
+  public shared ({ caller }) func createCoupon(couponData : Coupon) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not authorized");
+    };
+
+    //TODO check ledger balance
+    let balance = await ledger_canister.icrc1_balance_of({
+      owner = Principal.fromActor(Self);
+      subaccount = null;
+    });
+
+    if (balance < couponData.amount + CKBTC_FEE + outstandingCouponsBalance) return #err("Not enough balance");
+
+    outstandingCouponsBalance := outstandingCouponsBalance + couponData.amount + CKBTC_FEE;
+
+    let fuzz = Fuzz.Fuzz();
+    let couponId = fuzz.text.randomAlphanumeric(16);
+    Debug.print(debug_show (couponData));
+    ignore Map.put(coupons, thash, couponId, { couponData with id = couponId });
+
+    return #ok(couponId);
+  };
+
+  public shared ({ caller }) func getCoupons() : async Result.Result<[Coupon], Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not Authorized");
+    };
+    let iter = Map.vals<Text, Coupon>(coupons);
+    return #ok(Iter.toArray(iter));
+  };
+
+  public shared ({ caller }) func redeemCoupon(couponId : Text) : async Result.Result<Text, Text> {
+
+    if (isAnonymous(caller)) return #err("For your safety you can't withdraw to an anonymous principal, login first");
+    var amount = 0;
+    switch (Map.get(coupons, thash, couponId)) {
+      case (?coupon) {
+        if (coupon.state == #frozen) return #err("Coupon is frozen and can't be redeemed");
+        if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
+        amount := coupon.amount;
+      };
+      case (null) {
+        return #err("No such coupon");
+      };
+    };
+    //TODO check timeframe
+
+    //TODO ledger transfer
+    let res = await ledger_canister.icrc1_transfer({
+      to = { owner = caller; subaccount = null };
+      fee = ?CKBTC_FEE;
+      memo = null;
+      from_subaccount = null;
+      created_at_time = null;
+      amount = amount //decimals
+    });
+    switch (res) {
+      case (#ok(n)) {
+        outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
+        switch (Map.get(coupons, thash, couponId)) {
+          case (?coupon) {
+            ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed });
+          };
+          case (null) {
+            return #err("No such coupon");
+          };
+        };
+        return #ok("Success! check your wallet");
+      };
+      case (#err(_)) {
+        return #err("Error!");
+      };
+    };
+  };
+
+  public shared ({ caller }) func updateCouponState(couponId : Text, newState : { #active; #frozen }) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not Authorized");
+    };
+    switch (Map.get(coupons, thash, couponId)) {
+      case (?coupon) {
+        if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
+
+        ignore Map.remove(coupons, thash, couponId);
+        ignore Map.put(coupons, thash, couponId, { coupon with state = newState });
+        return #ok("Coupon Updated");
+      };
+      case (null) {
+        return #err("No coupon with this ID");
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteCoupon(couponId : Text) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not Authorized");
+    };
+    switch (Map.get(coupons, thash, couponId)) {
+      case (?coupon) {
+        if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
+
+        ignore Map.remove(coupons, thash, couponId);
+        outstandingCouponsBalance := outstandingCouponsBalance - coupon.amount;
+        return #ok("Coupon Deleted");
+      };
+      case (null) {
+        return #err("No coupon with this ID");
+      };
+    };
   };
 
   public shared ({ caller }) func createEventNft(eventData : Event) : async Result.Result<Text, Text> {
