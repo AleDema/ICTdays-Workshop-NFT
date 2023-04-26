@@ -47,7 +47,7 @@ function ClaimPage() {
     return (
         <div className="flex items-center justify-center">
             {isConnected ?
-                <div lassName="flex flex-col">
+                <div className="flex flex-col">
                     <Suspense fallback={<div>Loading...</div>}>
                         <EventCard claimNft={claimNft} isClaim={true} id={id} mimeType={event?.nftType || "img"} key={id} name={event?.nftName} url={event?.nftUrl}></EventCard>
                     </Suspense>
