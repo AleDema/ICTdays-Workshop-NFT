@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
+import { useConnect, useCanister } from "@connect2ic/react"
+import EventCard from '../components/EventCard';
 function ClaimPage() {
 
     const { isConnected, principal, activeProvider } = useConnect({
@@ -15,6 +16,7 @@ function ClaimPage() {
     })
     const [response, setResponse] = React.useState(null)
     const [nftCanister] = useCanister("DIP721")
+    const [event, setEvent] = React.useState(null)
     const navigate = useNavigate();
     let { id } = useParams();
 
@@ -29,25 +31,36 @@ function ClaimPage() {
         }
         const timeout = setTimeout(() => {
             navigate('/');
-        }, 2000)
-        //clearTimeout(timeout)
+        }, 4000)
     }
 
+    React.useEffect(() => {
+        const init = async () => {
+            let nftdata = await nftCanister.getEvent(id);
+            setEvent(nftdata.ok)
+            console.log(nftdata)
+        }
+        init()
+
+    }, []);
+
     return (
-        <>
+        <div className="flex items-center justify-center">
             {isConnected ?
-                <>
-                    <button className='bg-[#0C93EA] w-full' onClick={claimNft}>Claim NFT</button>
+                <div lassName="flex flex-col">
+                    <Suspense fallback={<div>Loading...</div>}>
+                        <EventCard claimNft={claimNft} isClaim={true} id={id} mimeType={event?.nftType || "img"} key={id} name={event?.nftName} url={event?.nftUrl}></EventCard>
+                    </Suspense>
                     {response &&
                         <p>{response}</p>
                     }
-                </>
+                </div>
                 :
                 <>
                     <h2>Login to claim NFT</h2>
                 </>
             }
-        </>
+        </div >
     )
 }
 

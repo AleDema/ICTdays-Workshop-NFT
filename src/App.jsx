@@ -90,12 +90,9 @@ function App(props) {
           target="_blank"
         >
           <span className="logo-stack">
-            <img
-              src={motokoShadowLogo}
-              className="logo motoko-shadow"
-              alt="Motoko logo"
-            />
-            <img src={motokoLogo} className="logo motoko" alt="Motoko logo" />
+            {/* <img src={motokoLogo} className="logo motoko" alt="Motoko logo" /> */}
+            <img src="/dfinity_logo.png" alt="DFINITY Logo" className='max-w-[200px]' />
+
           </span>
         </a>
       </div>

@@ -22,9 +22,18 @@ function EventCard(props) {
         <div className='flex flex-col items-center justify-center h-fit p-6 max-w-md rounded-l border-sky-600 border gap-4 m-7'>
             <p className="font-bold">{props.name}</p>
             <FileRenderer src={props.url} mimeType={props.mimeType}></FileRenderer>
-            <Link to={`/claimnft/${props.id}`} key={props.id}>
-                <button className="ml-2 mb-2 bg-[#0C93EA]">Go to page</button>
-            </Link>
+            {
+                props.isClaim ?
+                    <>
+                        <button className='bg-[#0C93EA] w-full' onClick={props.claimNft}>Claim NFT</button>
+                    </>
+                    :
+                    <>
+                        <Link to={`/claimnft/${props.id}`} key={props.id}>
+                            <button className="ml-2 mb-2 bg-[#0C93EA]">Go to page</button>
+                        </Link>
+                    </>
+            }
         </div>
     )
 }

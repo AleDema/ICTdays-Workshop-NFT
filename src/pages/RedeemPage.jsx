@@ -30,9 +30,9 @@ function RedeemPage() {
         } else if (res.err) {
             setResponse(res.err)
         }
-        // const timeout = setTimeout(() => {
-        //     navigate('/');
-        // }, 3000)
+        const timeout = setTimeout(() => {
+            navigate('/');
+        }, 3000)
         //clearTimeout(timeout)
     }
 

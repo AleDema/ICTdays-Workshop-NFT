@@ -3,9 +3,7 @@ import React from 'react'
 function Footer() {
 
   return (
-    <div className='w-screen flex flex-col items-center justify-center bg-gray-900 pb-10'>
-      <img src="/dfinity_logo.png" alt="DFINITY Logo" className='max-w-[200px]' />
-
+    <div className=' mt-auto w-screen flex flex-col items-center justify-center bg-gray-900 pb-10'>
       <div className='flex flex-row items-center justify-between max-w-2xl w-full mx-auto'>
 
         <a href="https://t.me/ICP_Italia" target='_blank' className='text-white flex flex-row items-center gap-2'>
@@ -18,10 +16,6 @@ function Footer() {
           DFINITY Foundation
         </a>
 
-        <a href="https://smartcontracts.org/" target='_blank' className='text-white flex flex-row items-center gap-2'>
-          <img src='/dfinity_logo.png' alt="DFINITY" className='h-[24px]' />
-          Smart Contracts
-        </a>
 
         <a href="https://internetcomputer.org/" target='_blank' className='text-white flex flex-row items-center gap-2'>
           <img src='/dfinity_logo.png' alt="DFINITY" className='h-[24px]' />

@@ -427,21 +427,6 @@ function AdminPage(props) {
 
     return (
         <>
-            <div className="flex flex-row justify-center items-center">
-                <a
-                    href="https://internetcomputer.org/docs/current/developer-docs/build/cdks/motoko-dfinity/motoko/"
-                    target="_blank"
-                >
-                    <span className="logo-stack">
-                        <img
-                            src={motokoShadowLogo}
-                            className="logo motoko-shadow"
-                            alt="Motoko logo"
-                        />
-                        <img src={motokoLogo} className="logo motoko" alt="Motoko logo" />
-                    </span>
-                </a>
-            </div>
             {cycleAlert && <p>WARNING: Not enough cycles to spin up storage canister</p>}
             {principal !== undefined && nftCanister !== null && isCustodian &&
                 <>

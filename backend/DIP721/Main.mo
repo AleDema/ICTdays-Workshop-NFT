@@ -392,6 +392,17 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return #ok(Iter.toArray(iter));
   };
 
+  public query func getEvent(eventId : Text) : async Result.Result<Event, Text> {
+    switch (Map.get(events, thash, eventId)) {
+      case (?event) {
+        return #ok(event);
+      };
+      case (null) {
+        return #err("No such event");
+      };
+    };
+  };
+
   public shared ({ caller }) func claimEventNft(id : Text) : async Result.Result<Text, Text> {
 
     // get event metadata

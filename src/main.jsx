@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import Footer from './components/Footer';
 import { defaultProviders } from "@connect2ic/core/providers"
 import { createClient } from "@connect2ic/core"
 import { Connect2ICProvider } from "@connect2ic/react"
@@ -40,6 +39,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Connect2ICProvider client={client}>
       <App defaultProviders={defaultProviders} />
     </Connect2ICProvider>
-    <Footer />
   </React.StrictMode>,
 );
