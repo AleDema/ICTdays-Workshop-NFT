@@ -97,6 +97,7 @@ function AdminPage(props) {
         //console.log(nftActor)
         console.log(`NFT Canister ID: ${process.env.DIP721_CANISTER_ID}`)
         setStorageCanister(storageActor.value)
+        return storageActor.value
     }
 
     async function fetchId() {
@@ -125,18 +126,18 @@ function AdminPage(props) {
         setIsCustodian(check)
         const res = await DIP721.get_storage_canister_id();//gets storage canister id and if it doesnt exist it creates one
         if (res.ok) {
-            createStorageActor(res.ok)
+            return await createStorageActor(res.ok)
             //setNftCanister(nftActor)
         } else if (res.err.nostorageid === null) {
             const res1 = await DIP721.create_storage_canister(isProd);//gets storage canister id and if it doesnt exist it creates one
             if (res1.ok) {
-                createStorageActor(res1.ok)
+                return await createStorageActor(res1.ok)
                 //setNftCanister(nftActor)
             } else if (res.err.awaitingid === null) {
                 fetchId()
-                    .then(id => {
+                    .then(async id => {
                         console.log(`The valid id is ${id}`);
-                        createStorageActor(id)
+                        return await createStorageActor(id)
                         //setNftCanister(nftActor)
                     })
                     .catch(error => {
@@ -147,8 +148,8 @@ function AdminPage(props) {
             }
         } else if (res.err.awaitingid === null) {
             fetchId()
-                .then(id => {
-                    createStorageActor(id)
+                .then(async (id) => {
+                    return await createStorageActor(id)
                     //setNftCanister(nftActor)
                 })
                 .catch(error => {
@@ -194,15 +195,17 @@ function AdminPage(props) {
         }
     }
 
-    const uploadImage = async () => {
+    const uploadImage = async (storage_actor) => {
         let chunk_ids = [];
         let batch_id = Math.random().toString(36).substring(2, 7);
 
+        let sc = storageCanister || storage_actor
+        console.log(sc)
         const uploadChunk = async ({ chunk, order }) => {
             //console.log(storageCanister)
             // console.log(storage)
             console.log("UPLOADING CHUNKS")
-            return storageCanister.create_chunk(batch_id, Array.from(chunk), order);
+            return sc.create_chunk(batch_id, Array.from(chunk), order);
         };
         const asset_unit8Array = await getUint8Array(file)
         //console.log(asset_unit8Array)
@@ -229,7 +232,7 @@ function AdminPage(props) {
         const asset_filename = file.name;
         const asset_content_type = file.type
         console.log("COMMIT BATCH")
-        const { ok: asset_id } = await storageCanister.commit_batch(
+        const { ok: asset_id } = await sc.commit_batch(
             batch_id,
             chunk_ids,
             {
@@ -245,7 +248,7 @@ function AdminPage(props) {
         }
         //console.log(asset_id);
         console.log("GETTING ID")
-        const { ok: asset } = await storageCanister.get(asset_id);
+        const { ok: asset } = await sc.get(asset_id);
         //console.log(asset);
         //setUploaded(asset.url)
         console.log("RETURNING ASSET")
@@ -277,11 +280,13 @@ function AdminPage(props) {
             return
         }
 
+        let storage_actor;
         if (storageCanister === null)
-            await initActors();
+            storage_actor = await initActors();
+
         //upload image
         setLoading(true)
-        const onChainFile = await uploadImage()
+        const onChainFile = await uploadImage(storage_actor)
         if (!onChainFile) return;
 
         nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", limit: [], startDate: [], endDate: [] })
@@ -472,7 +477,7 @@ function AdminPage(props) {
 
                             </div>
                         </div>
-                        <div>
+                        <div className=' self-start'>
                             <div className='flex flex-col items-top justify-center gap-6 max-w-md mx-auto mb-10'>
                                 <div className='flex flex-col items-start gap-2 w-full'>
                                     <input type="number" id="couponamount" name="nftcouponamountname" className="px-2 py-1 rounded-lg w-full" ref={couponAmountField} placeholder="Coupon Amount" />
@@ -504,15 +509,18 @@ function AdminPage(props) {
 
                             </div>
                         </div>
-                        <div className='flex flex-col gap-2'>
+                        <div className='flex flex-col gap-2  self-start'>
                             <h2>Status</h2>
                             <p>NFT Canister Cycles: {nftCanisterBalance}</p>
                             <p>Storage Canister Cycles: {storageCanisterBalance}</p>
                             <p>Storage Daily Cycle Burn: {storageCanisterBurn}</p>
                             <p>Storage Memory Usage: {storageCanisterMemory}</p>
+                            <p>Estimated lifetime: {storageCanisterMemory}</p>
+                            <p>Canister ckBTC balance: {storageCanisterMemory}</p>
+                            <p>Canister outstanding balance: {storageCanisterMemory}</p>
                         </div>
                     </div>
-                    <div className="flex flex-row gap-4 ml-5">
+                    <div className="flex flex-row gap-4 ml-[4.3rem]">
                         <button onClick={() => changeSelection("events")}>Events</button>
                         <button onClick={() => changeSelection("coupons")}>Coupons</button>
                     </div>
@@ -560,12 +568,6 @@ function AdminPage(props) {
             {
                 principal === undefined && <>
                     <p>Login to interact...</p>
-                </>
-            }
-
-            {
-                isCustodian && storageCanister === null && principal && <>
-                    <p>Retrieving Data...</p>
                 </>
             }
         </>

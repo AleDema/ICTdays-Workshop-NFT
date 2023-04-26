@@ -15,7 +15,8 @@ import {
   RouterProvider,
   Route
 } from "react-router-dom";
-
+import { useSnapshot } from 'valtio'
+import state from "./context/global"
 
 function App(props) {
   const [loading, setLoading] = useState(false);
@@ -23,6 +24,7 @@ function App(props) {
   const [isCustodian, setIsCustodian] = useState(false);
   const [nfts, setNfts] = useState([]);
   const [nftCanister] = useCanister("DIP721")
+  const snap = useSnapshot(state)
   const { isConnected, principal, activeProvider } = useConnect({
     onConnect: () => {
       // Signed in
@@ -38,6 +40,7 @@ function App(props) {
   const disconnect = async () => {
     //clean up state
     setIsCustodian(false)
+    state.isAdmin = false;
     setLoading(null)
     setNfts([])
   }
@@ -72,6 +75,7 @@ function App(props) {
     const init = async () => {
       let check = await nftCanister.isCustodian();
       setIsCustodian(check);
+      state.isAdmin = check;
       fetchData();
     }
     init()
@@ -84,21 +88,8 @@ function App(props) {
 
   return (
     < >
-      <div className="flex flex-row justify-center items-center">
-        <a
-          href="https://internetcomputer.org/docs/current/developer-docs/build/cdks/motoko-dfinity/motoko/"
-          target="_blank"
-        >
-          <span className="logo-stack">
-            {/* <img src={motokoLogo} className="logo motoko" alt="Motoko logo" /> */}
-            <img src="/dfinity_logo.png" alt="DFINITY Logo" className='max-w-[200px]' />
-
-          </span>
-        </a>
-      </div>
       {principal !== undefined && nftCanister !== null &&
         <>
-          {isCustodian && <Link to={`/admin`}>Admin Panel</Link>}
           <h2>NFTS</h2>
           {
             nfts.length > 0 ? (
