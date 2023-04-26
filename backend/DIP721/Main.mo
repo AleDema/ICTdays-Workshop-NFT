@@ -49,6 +49,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     endDate : ?Nat;
     amount : Nat;
     state : CouponStates;
+    redeemer : ?Principal;
   };
   stable var transactionId : Types.TransactionId = 0;
   stable var nfts = List.nil<Types.Nft>();
@@ -83,7 +84,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   let IS_PROD = false;
   //TODO: update when deploying on mainnet
   let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
-  var icrc_principal = "rno2w-sqaaa-aaaaa-aaacq-cai";
+  var icrc_principal = "ryjl3-tyaaa-aaaaa-aaaba-cai";
   if (IS_PROD) {
     icrc_principal := main_ledger_principal;
   };
@@ -263,6 +264,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let fuzz = Fuzz.Fuzz();
     let couponId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (couponData));
+    Debug.print(debug_show (outstandingCouponsBalance));
+    Debug.print(debug_show (balance - outstandingCouponsBalance));
     ignore Map.put(coupons, thash, couponId, { couponData with id = couponId });
 
     return #ok(couponId);
@@ -274,6 +277,17 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
     let iter = Map.vals<Text, Coupon>(coupons);
     return #ok(Iter.toArray(iter));
+  };
+
+  public query func getCoupon(couponId : Text) : async Result.Result<Coupon, Text> {
+    switch (Map.get(coupons, thash, couponId)) {
+      case (?coupon) {
+        return #ok(coupon);
+      };
+      case (null) {
+        return #err("No such coupon");
+      };
+    };
   };
 
   public shared ({ caller }) func redeemCoupon(couponId : Text) : async Result.Result<Text, Text> {
@@ -301,6 +315,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       created_at_time = null;
       amount = amount //decimals
     });
+    Debug.print(debug_show (res));
     switch (res) {
       case (#ok(n)) {
         outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;

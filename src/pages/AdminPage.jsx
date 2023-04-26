@@ -5,8 +5,8 @@ import motokoShadowLogo from '../assets/motoko_shadow.png';
 import { DIP721 } from '../declarations/DIP721';
 import { idlFactory as storageFactory } from "../lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
-import Card from '../components/Card';
 import EventCard from '../components/EventCard';
+import CouponCard from '../components/CouponCard';
 import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
 import {
     createRoutesFromElements, Link, createBrowserRouter,
@@ -40,6 +40,12 @@ const isSupportedType = (type) => {
     return false;
 }
 
+const options = [
+    { value: "active", label: "Active" },
+    { value: "frozen", label: "Frozen" },
+];
+
+
 function AdminPage(props) {
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
@@ -49,6 +55,7 @@ function AdminPage(props) {
     const [storageCanister, setStorageCanister] = useState(null);
     const [isCustodian, setIsCustodian] = useState(false);
     const [events, setEvents] = useState([]);
+    const [coupons, setCoupons] = useState([]);
     const [nftCanisterBalance, setNftCanisterBalance] = useState(0);
     const [storageCanisterBalance, setStorageCanisterBalance] = useState(0);
     const [storageCanisterBurn, setStorageCanisterBurn] = useState(0);
@@ -57,6 +64,10 @@ function AdminPage(props) {
     const nftUrlField = useRef(null)
     const eventStartField = useRef(null)
     const eventEndField = useRef(null)
+    const couponAmountField = useRef(null)
+    const couponStartField = useRef(null)
+    const couponEndField = useRef(null)
+    const [current, setCurrent] = useState("events");
     const [nftCanister] = useCanister("DIP721")
     const { isConnected, principal, activeProvider } = useConnect({
         onConnect: () => {
@@ -265,6 +276,9 @@ function AdminPage(props) {
             setError("Unsupported File Type")
             return
         }
+
+        if (storageCanister === null)
+            await initActors();
         //upload image
         setLoading(true)
         const onChainFile = await uploadImage()
@@ -356,21 +370,41 @@ function AdminPage(props) {
         setLoading(false)
     }
 
+
+    const handleChange = async () => { }
+    const changeSelection = (selection) => {
+        setCurrent(selection)
+    }
+
+    const createCoupon = async () => {
+        if (!nftCanister) {
+            console.log("Init error!")
+            return
+        }
+
+        let res = await nftCanister.createCoupon({ id: "", state: { active: null }, limit: [], startDate: [], endDate: [], redeemer: [], amount: Number(couponAmountField.current.value) })
+        console.log(res)
+    }
+
     const fetchData = async () => {
-        // console.log(`principal ${principal}`)
-        // console.log("nftCanister")
-        // console.log(nftCanister)
         if (nftCanister === null || principal === undefined) return
         const events = await nftCanister.getEvents();
         console.log(events)
         if (events.ok) {
             setEvents(events.ok);
         }
+
+        const coupons = await nftCanister.getCoupons();
+        console.log(coupons)
+        if (coupons.ok) {
+            setCoupons(coupons.ok);
+        }
     }
 
     useEffect(() => {
         const init = async () => {
             fetchData();
+            setIsCustodian(await nftCanister.isCustodian())
             let status = await nftCanister.get_status()
             console.log(status)
             setNftCanisterBalance(Number(status.nft_balance))
@@ -388,20 +422,11 @@ function AdminPage(props) {
     useEffect(() => {
         console.log("principal changed")
         console.log(principal)
-        initActors()
+        //initActors()
     }, [principal]);
 
     return (
-        <div className="bg-gray-900 w-screen h-[90vh] flex flex-col overflow-auto ">
-            <div className="flex flex-row">
-                <div className="self-start p-8 font-bold">
-                    <h1>Blockchain Week Minter</h1>
-                </div>
-                <div className="self-end p-8 ml-auto">
-                    <ConnectButton />
-                    <ConnectDialog />
-                </div>
-            </div>
+        <>
             <div className="flex flex-row justify-center items-center">
                 <a
                     href="https://internetcomputer.org/docs/current/developer-docs/build/cdks/motoko-dfinity/motoko/"
@@ -465,23 +490,29 @@ function AdminPage(props) {
                         <div>
                             <div className='flex flex-col items-top justify-center gap-6 max-w-md mx-auto mb-10'>
                                 <div className='flex flex-col items-start gap-2 w-full'>
-                                    <input type="number" id="couponamount" name="nftcouponamountname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="Coupon Amount" />
+                                    <input type="number" id="couponamount" name="nftcouponamountname" className="px-2 py-1 rounded-lg w-full" ref={couponAmountField} placeholder="Coupon Amount" />
                                     <p className='text-[12px] font-thin opacity-70'>Coupon Amount</p>
                                 </div>
                                 <div className="flex flex-row gap-1">
                                     <p className='text-[12px] font-thin opacity-70'>Start Date</p>
-                                    <input ref={eventStartField} type="date" id="start" name="event-start"
+                                    <input ref={couponStartField} type="date" id="start" name="event-start"
                                         min="2018-01-01"></input>
                                 </div>
                                 <div className="flex flex-row gap-1">
                                     <p className='text-[12px] font-thin opacity-70'>End Date</p>
-                                    <input ref={eventEndField} type="date" id="start" name="event-end"
+                                    <input ref={couponEndField} type="date" id="start" name="event-end"
                                     ></input>
                                 </div>
-
+                                <select className="w-full px-2 py-1 rounded-lg" onChange={handleChange}>
+                                    {options.map((option) => (
+                                        <option className="text-white w-full" key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
                                 <div className="flex flex-row justify-center items-center w-full">
                                     {/* <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button> */}
-                                    <button className='bg-[#0C93EA] w-full' onClick={createEventNft}>Create Coupon</button>
+                                    <button className='bg-[#0C93EA] w-full' onClick={createCoupon}>Create Coupon</button>
                                 </div>
                                 {error && <p>{error}</p>}
                                 {loading && <p>Creating Event NFT...</p>}
@@ -490,26 +521,53 @@ function AdminPage(props) {
                         </div>
                         <div className='flex flex-col gap-2'>
                             <h2>Status</h2>
-                            <p>nftCanisterBalance: {nftCanisterBalance}</p>
-                            <p>storageCanisterBalance: {storageCanisterBalance}</p>
-                            <p>storageCanisterBurn: {storageCanisterBurn}</p>
-                            <p>storageCanisterMemory: {storageCanisterMemory}</p>
+                            <p>NFT Canister Cycles: {nftCanisterBalance}</p>
+                            <p>Storage Canister Cycles: {storageCanisterBalance}</p>
+                            <p>Storage Daily Cycle Burn: {storageCanisterBurn}</p>
+                            <p>Storage Memory Usage: {storageCanisterMemory}</p>
                         </div>
                     </div>
-                    <h2>Events</h2>
+                    <div className="flex flex-row gap-4 ml-5">
+                        <button onClick={() => changeSelection("events")}>Events</button>
+                        <button onClick={() => changeSelection("coupons")}>Coupons</button>
+                    </div>
                     {
-                        events.length > 0 ? (
-                            <div className="flex flex-row flex-wrap px-10">
+                        current === "events" ?
+                            <>
+                                <h2>Events</h2>
                                 {
-                                    events.map((e, i) => {
-                                        return (
-                                            <>
-                                                <EventCard id={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl}></EventCard>
-                                            </>
-                                        )
-                                    })
+                                    events.length > 0 ? (
+                                        <div className="flex flex-row flex-wrap px-10">
+                                            {
+                                                events.map((e, i) => {
+                                                    return (
+                                                        <>
+                                                            <EventCard id={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl}></EventCard>
+                                                        </>
+                                                    )
+                                                })
+                                            }
+                                        </div>) : (<div className="flex justify-center items-center" >You haven't created any events</div>)
                                 }
-                            </div>) : (<div className="flex justify-center items-center" >You haven't created any events</div>)
+                            </>
+                            :
+                            <>
+                                <h2>Coupons</h2>
+                                {
+                                    coupons.length > 0 ? (
+                                        <div className="flex flex-row flex-wrap px-10">
+                                            {
+                                                coupons.map((e, i) => {
+                                                    return (
+                                                        <>
+                                                            <CouponCard id={e.id} amount={Number(e.amount)} key={e.id} state={e.state}></CouponCard>
+                                                        </>
+                                                    )
+                                                })
+                                            }
+                                        </div>) : (<div className="flex justify-center items-center" >You haven't created any coupons</div>)
+                                }
+                            </>
                     }
                 </>
             }
@@ -525,7 +583,7 @@ function AdminPage(props) {
                     <p>Retrieving Data...</p>
                 </>
             }
-        </div >
+        </>
     );
 }
 

@@ -39,10 +39,10 @@ it will look something like this:
 `
 
 you only need this part: `362pf-fiaaa-aaaap-qbaoq-cai`
-
+`
   dfx deploy ledger --argument "( record {                     
-      name = \"ckBTC\";                         
-      symbol = \"ckBTC\";                           
+      name = \"<ckBTC>\";                         
+      symbol = \"<ckBTC>\";                           
       decimals = 8;                                           
       fee = 10;                                        
       max_supply = 1_000_000_000_000;                         
@@ -59,3 +59,4 @@ owner = principal \"rrkah-fqaaa-aaaaa-aaaaq-cai\";
       minting_account = null;                                 
       advanced_settings = null;                               
   })"
+`

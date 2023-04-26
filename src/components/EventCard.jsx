@@ -18,7 +18,6 @@ function FileRenderer(props) {
 
 
 function EventCard(props) {
-    console.log(props.id)
     return (
         <div className='flex flex-col items-center justify-center h-fit p-6 max-w-md rounded-l border-sky-600 border gap-4 m-7'>
             <p className="font-bold">{props.name}</p>

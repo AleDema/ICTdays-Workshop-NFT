@@ -83,16 +83,7 @@ function App(props) {
   }, [nftCanister, principal]);
 
   return (
-    <div className="bg-gray-900 w-screen h-[90vh] flex flex-col overflow-auto ">
-      <div className="flex flex-row">
-        <div className="self-start p-8 font-bold">
-          <h1>Blockchain Week Minter</h1>
-        </div>
-        <div className="self-end p-8 ml-auto">
-          <ConnectButton />
-          <ConnectDialog />
-        </div>
-      </div>
+    < >
       <div className="flex flex-row justify-center items-center">
         <a
           href="https://internetcomputer.org/docs/current/developer-docs/build/cdks/motoko-dfinity/motoko/"
@@ -139,7 +130,7 @@ function App(props) {
           <p>Login to interact...</p>
         </>
       }
-    </div >
+    </ >
   );
 }
 
