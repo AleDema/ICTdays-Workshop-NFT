@@ -20,6 +20,7 @@ import Map "mo:map/Map";
 import Fuzz "mo:fuzz";
 import Prim "mo:prim";
 import Iter "mo:base/Iter";
+import Timer "mo:base/Timer";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
 
@@ -252,6 +253,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let eventId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (eventData));
     ignore Map.put(events, thash, eventId, { eventData with id = eventId });
+    ignore update_status();
     return #ok(eventId);
   };
 
@@ -279,7 +281,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
         return #err("No such event");
       };
     };
-    //check timeframe
+    //TODO check timeframe
 
     //check if user has already redeemed
     let check = Map.get(eventsByPrincipal, pthash, (caller, id));
@@ -478,22 +480,52 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     controllers : [Principal];
   };
 
-  public shared ({ caller }) func get_status() : async Result.Result<CanisterStatus, Text> {
-    if (storage_canister_id == "") return #err("No storage canister");
+  stable var canister_status : CanisterStatus = {
+    nft_balance = Cycles.balance();
+    storage_balance = 0;
+    storage_memory_used = 0;
+    storage_daily_burn = 0;
+    controllers = [];
+  };
+
+  public query func get_status() : async CanisterStatus {
+    return canister_status;
+  };
+
+  private func update_status() : async () {
+    if (storage_canister_id == "") {
+      canister_status := {
+        canister_status with nft_balance = Cycles.balance();
+      };
+      return;
+    };
 
     let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
     let res = await management_canister_actor.canister_status({
       canister_id = Principal.fromText(storage_canister_id);
     });
     Debug.print(debug_show (res.settings.controllers));
-    return #ok({
+    canister_status := {
       nft_balance = Cycles.balance();
       storage_balance = res.cycles;
       storage_memory_used = res.memory_size;
       storage_daily_burn = res.idle_cycles_burned_per_day;
       controllers = res.settings.controllers;
-    });
+    };
+
+    return;
   };
+
+  // func setTimerA() {
+  //   ignore Timer.recurringTimer(
+  //     #seconds(10 * 60 * 60),
+  //     func() : async () {
+  //       Debug.print("fired");
+  //       await update_status();
+  //     },
+  //   );
+  // };
+  // setTimerA();
 
   private func isAnonymous(caller : Principal) : Bool {
     Principal.equal(caller, Principal.fromText("2vxsx-fae"));
@@ -510,3 +542,20 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return false;
   };
 };
+
+// public shared ({ caller }) func get_status() : async Result.Result<CanisterStatus, Text> {
+//   if (storage_canister_id == "") return #err("No storage canister");
+
+//   let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
+//   let res = await management_canister_actor.canister_status({
+//     canister_id = Principal.fromText(storage_canister_id);
+//   });
+//   Debug.print(debug_show (res.settings.controllers));
+//   return #ok({
+//     nft_balance = Cycles.balance();
+//     storage_balance = res.cycles;
+//     storage_memory_used = res.memory_size;
+//     storage_daily_burn = res.idle_cycles_burned_per_day;
+//     controllers = res.settings.controllers;
+//   });
+// };

@@ -18,18 +18,18 @@ function ClaimPage() {
     const navigate = useNavigate();
     let { id } = useParams();
 
-    // if (!isConnected) {
-    //     navigate('/');
-    //     return null;
-    // }
-
     const claimNft = async () => {
         let res = await nftCanister.claimEventNft(id)
         console.log(res)
         setResponse(res.ok || res.err)
+        if (res.ok) {
+            setResponse("Success! You claimed an NFT")
+        } else if (res.err) {
+            setResponse(res.err)
+        }
         const timeout = setTimeout(() => {
             navigate('/');
-        }, 2000)
+        }, 3000)
         //clearTimeout(timeout)
     }
 
