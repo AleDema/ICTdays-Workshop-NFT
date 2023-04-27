@@ -16,7 +16,7 @@ import {
   Route
 } from "react-router-dom";
 import { useSnapshot } from 'valtio'
-import state from "./context/global"
+import state from "./lib/state.js"
 
 function App(props) {
   const [loading, setLoading] = useState(false);
@@ -73,6 +73,7 @@ function App(props) {
 
   useEffect(() => {
     const init = async () => {
+      if (nftCanister === null) return
       let check = await nftCanister.isCustodian();
       setIsCustodian(check);
       state.isAdmin = check;

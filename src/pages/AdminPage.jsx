@@ -103,7 +103,7 @@ function AdminPage(props) {
     async function fetchId() {
         return new Promise((resolve, reject) => {
             let intervalId = setInterval(async () => {
-                const res = await DIP721.get_storage_canister_id();
+                const res = await nftCanister.get_storage_canister_id();
                 if (res.ok) {
                     clearInterval(intervalId);
                     resolve(res.ok)
@@ -124,21 +124,24 @@ function AdminPage(props) {
         let check = await nftCanister.isCustodian();
         if (!check) return;
         setIsCustodian(check)
-        const res = await DIP721.get_storage_canister_id();//gets storage canister id and if it doesnt exist it creates one
+        console.log("check")
+        console.log(check)
+        console.log("isProd")
+        console.log(isProd)
+        const res = await nftCanister.get_storage_canister_id();//gets storage canister id and if it doesnt exist it creates one
+        console.log("res")
+        console.log(res)
         if (res.ok) {
             return await createStorageActor(res.ok)
-            //setNftCanister(nftActor)
         } else if (res.err.nostorageid === null) {
-            const res1 = await DIP721.create_storage_canister(isProd);//gets storage canister id and if it doesnt exist it creates one
+            const res1 = await nftCanister.create_storage_canister(isProd);//gets storage canister id and if it doesnt exist it creates one
             if (res1.ok) {
                 return await createStorageActor(res1.ok)
-                //setNftCanister(nftActor)
             } else if (res.err.awaitingid === null) {
                 fetchId()
                     .then(async id => {
                         console.log(`The valid id is ${id}`);
                         return await createStorageActor(id)
-                        //setNftCanister(nftActor)
                     })
                     .catch(error => {
                         console.error(`Error fetching the id: ${error}`);
@@ -150,7 +153,6 @@ function AdminPage(props) {
             fetchId()
                 .then(async (id) => {
                     return await createStorageActor(id)
-                    //setNftCanister(nftActor)
                 })
                 .catch(error => {
                     console.error(`Error fetching the id: ${error}`);
@@ -160,7 +162,6 @@ function AdminPage(props) {
 
     function handleFileUpload(event) {
         const selectedFile = event.target.files[0];
-        // console.log(selectedFile)
         validateFile(selectedFile);
     }
 
@@ -281,8 +282,11 @@ function AdminPage(props) {
         }
 
         let storage_actor;
-        if (storageCanister === null)
+        if (storageCanister === null) {
+            console.log("storageCanister === null")
             storage_actor = await initActors();
+            console.log(storage_actor)
+        }
 
         //upload image
         setLoading(true)
@@ -435,7 +439,7 @@ function AdminPage(props) {
             {cycleAlert && <p>WARNING: Not enough cycles to spin up storage canister</p>}
             {principal !== undefined && nftCanister !== null && isCustodian &&
                 <>
-                    <div className='flex flex-row gap-20 justify-center items-center'>
+                    <div className='flex flex-row gap-20 justify-center items-center flex-wrap'>
                         <div
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
@@ -501,7 +505,6 @@ function AdminPage(props) {
                                     ))}
                                 </select>
                                 <div className="flex flex-row justify-center items-center w-full">
-                                    {/* <button className='bg-[#0C93EA] w-full' onClick={mintNft}>Mint NFT</button> */}
                                     <button className='bg-[#0C93EA] w-full' onClick={createCoupon}>Create Coupon</button>
                                 </div>
                                 {error && <p>{error}</p>}

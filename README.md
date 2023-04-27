@@ -60,3 +60,28 @@ owner = principal \"rrkah-fqaaa-aaaaa-aaaaq-cai\";
       advanced_settings = null;                               
   })"
 `
+
+
+`
+  dfx canister install ledger --network ic --argument "( record {                     
+      name = \"<ckBTC>\";                         
+      symbol = \"<ckBTC>\";                           
+      decimals = 8;                                           
+      fee = 10;                                        
+      max_supply = 1_000_000_000_000;                         
+      initial_balances = vec {                                
+          record {                                            
+              record {                                        
+owner = principal \"362pf-fiaaa-aaaap-qbaoq-cai\";   
+                  subaccount = null;                                  
+              };                                              
+              100_000_000_000_000_000                                 
+          }                                                   
+      };                                                      
+      min_burn_amount = 10_000_000;                           
+      minting_account = null;                                 
+      advanced_settings = null;                               
+  })"
+`
+
+dfx canister call frontend2 set_asset_properties '( record { key="**/*"; allow_raw_access=opt(opt(true)) })'

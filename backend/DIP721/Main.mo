@@ -83,7 +83,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   let CKBTC_FEE : Nat = 10;
   let IS_PROD = false;
   //TODO: update when deploying on mainnet
-  let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
+  let main_ledger_principal = "bkmua-faaaa-aaaap-qbc3a-cai";
   var icrc_principal = "ryjl3-tyaaa-aaaaa-aaaba-cai";
   if (IS_PROD) {
     icrc_principal := main_ledger_principal;
@@ -630,6 +630,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return canister_status;
   };
 
+  //todo check
   private func update_status() : async () {
     if (storage_canister_id == "") {
       canister_status := {
