@@ -2,14 +2,14 @@
   "DIP721": {
     "ic": "362pf-fiaaa-aaaap-qbaoq-cai"
   },
-  "old_frontend": {
-    "ic": "3xzez-taaaa-aaaap-qbapa-cai"
-  },
   "frontend": {
-    "ic": "a4hml-qqaaa-aaaap-qbc6a-cai"
+    "ic": "avehx-gyaaa-aaaap-qbc7q-cai"
   },
   "ledger": {
     "ic": "bkmua-faaaa-aaaap-qbc3a-cai"
+  },
+  "old_frontend": {
+    "ic": "3xzez-taaaa-aaaap-qbapa-cai"
   },
   "storage": {
     "ic": "5aui7-6qaaa-aaaap-qba2a-cai"

@@ -94,7 +94,7 @@ function AdminPage(props) {
         const storageCanisterId = id
         console.log(`Storage Canister ID: ${storageCanisterId}`)
         const storageActor = await activeProvider.createActor(storageCanisterId, storageFactory)
-        //console.log(nftActor)
+        console.log(storageActor)
         console.log(`NFT Canister ID: ${process.env.DIP721_CANISTER_ID}`)
         setStorageCanister(storageActor.value)
         return storageActor.value
@@ -108,7 +108,7 @@ function AdminPage(props) {
                     clearInterval(intervalId);
                     resolve(res.ok)
                 }
-            }, 500);
+            }, 1000);
         });
     }
 
@@ -199,17 +199,29 @@ function AdminPage(props) {
     const uploadImage = async (storage_actor) => {
         let chunk_ids = [];
         let batch_id = Math.random().toString(36).substring(2, 7);
-
-        let sc = storageCanister || storage_actor
-        console.log(sc)
+        let sc = storage_actor
+        if (storageCanister !== null) {
+            sc = storageCanister
+            console.log("storageCanister !== null");
+        }
+        console.log(sc);
+        // const asset_unit8Array = await getUint8Array(file)
+        // const chunk = asset_unit8Array.slice(0, 2000000);
+        // let test = await sc.test()
+        // console.log(test)
+        // let res = await sc.create_chunk(batch_id, Array.from(chunk), 0);
+        // console.log(res);
+        // console.log(sc)
+        // let test = await sc.test()
+        // console.log(test)
         const uploadChunk = async ({ chunk, order }) => {
             //console.log(storageCanister)
             // console.log(storage)
             console.log("UPLOADING CHUNKS")
-            return sc.create_chunk(batch_id, Array.from(chunk), order);
+            return sc.create_chunk(batch_id, chunk, order);
         };
         const asset_unit8Array = await getUint8Array(file)
-        //console.log(asset_unit8Array)
+        console.log(asset_unit8Array)
         const promises = [];
         const chunkSize = 2000000;
 
@@ -227,6 +239,8 @@ function AdminPage(props) {
             );
         }
 
+        console.log("AWAITING")
+        console.log(promises)
         chunk_ids = await Promise.all(promises);
 
 
@@ -282,6 +296,8 @@ function AdminPage(props) {
         }
 
         let storage_actor;
+        console.log("storageCanister")
+        console.log(storageCanister)
         if (storageCanister === null) {
             console.log("storageCanister === null")
             storage_actor = await initActors();
@@ -294,88 +310,6 @@ function AdminPage(props) {
         if (!onChainFile) return;
 
         nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", limit: [], startDate: [], endDate: [] })
-        setLoading(false)
-    }
-
-    const mintNft = async () => {
-        setError(null)
-        if (!nftCanister) {
-            console.log("Init error!")
-            return
-        }
-
-        if (file == null) {
-            console.log("No File selected")
-            setError("No File selected")
-            return
-        }
-
-        if (!isSupportedType(file.type)) {
-            console.log("Unsupported File Type")
-            setError("Unsupported File Type")
-            return
-        }
-        //upload image
-        setLoading(true)
-        const onChainFile = await uploadImage()
-        if (!onChainFile) return;
-        //mint nft
-        let metadata = {
-            purpose: {
-                Rendered: null
-            },
-            key_val_data: [
-                {
-                    key: "name",
-                    val: {
-                        TextContent: nftNameField.current.value || "Hello ICTdays"
-                    }
-                },
-                {
-                    key: "contentType",
-                    val: {
-                        TextContent: onChainFile.content_type
-                    }
-                },
-                {
-                    key: "locationType",
-                    val: {
-                        TextContent: "url"
-                    }
-                },
-                {
-                    key: "location",
-                    val: {
-                        TextContent: onChainFile.url
-                    }
-                },
-
-            ],
-            data: []
-        }
-        let p = Principal.fromText(principal)
-        //console.log(await nftCanister.getMetadataDip721(receipt.Ok.token_id))
-        let receipt = await nftCanister.mintDip721(p, [metadata])
-        console.log("receipt")
-        console.log(receipt)
-        //if minting fails, delete uploaded image
-        if (receipt.Err) {
-            const res = await storageCanister.delete_asset(onChainFile.id)
-            console.log(res)
-            setError(receipt.Err)
-        }
-
-        if (receipt.Ok) {
-            console.log("succesful mint")
-            console.log(receipt.Ok)
-            console.log(receipt.Ok.token_id)
-            let newNft = await nftCanister.getMetadataDip721(receipt.Ok.token_id)
-            console.log(newNft)
-            setNfts((oldNfts) => {
-                newNft.Ok.token_id = receipt.Ok.token_id
-                return [newNft.Ok, ...oldNfts]
-            })
-        }
         setLoading(false)
     }
 
@@ -411,6 +345,7 @@ function AdminPage(props) {
 
     useEffect(() => {
         const init = async () => {
+            if (nftCanister === null || principal === undefined) return
             fetchData();
             setIsCustodian(await nftCanister.isCustodian())
             let status = await nftCanister.get_status()

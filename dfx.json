@@ -15,6 +15,10 @@
             "main": "backend/ledger/Canisters/Token.mo",
             "candid": "backend/ledger/icrc1.did"
         },
+        "storage": {
+            "type": "motoko",
+            "main": "backend/Storage/FileStorage.mo"
+        },
         "frontend": {
             "type": "assets",
             "frontend": {

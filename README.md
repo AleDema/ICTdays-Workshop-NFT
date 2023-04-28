@@ -38,6 +38,8 @@ it will look something like this:
   },
 `
 
+dfx canister --network ic install storage --mode upgrade --argument "(true)"
+
 you only need this part: `362pf-fiaaa-aaaap-qbaoq-cai`
 `
   dfx deploy ledger --argument "( record {                     

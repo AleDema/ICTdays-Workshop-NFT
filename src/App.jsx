@@ -11,17 +11,6 @@ import RedeemPage from './pages/RedeemPage';
 import ClaimPage from './pages/ClaimPage';
 import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister, useWallet } from "@connect2ic/react"
 import {
-  AstroX,
-  ICX,
-  defaultProviders,
-  PlugWallet,
-  InfinityWallet,
-  NFID,
-  StoicWallet,
-  InternetIdentity,
-  walletProviders,
-} from "@connect2ic/core/providers"
-import {
   createRoutesFromElements, Link, createBrowserRouter,
   RouterProvider,
   Route
@@ -104,7 +93,12 @@ function App(props) {
     // console.log(nftCanister)
     if (nftCanister === null || principal === undefined) return
     const ids = await nftCanister.getTokenIdsForUserDip721(Principal.fromText(principal))
-    const newNfts = await Promise.all(ids.map(async (item) => {
+    const newArray = []
+    for (const id of ids) {
+      newArray.push(Number(id))
+    }
+    console.log(ids)
+    const newNfts = await Promise.all(newArray.map(async (item) => {
       let value = await nftCanister.getMetadataDip721(item)
       value.Ok.token_id = item
       return value.Ok

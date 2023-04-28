@@ -79,6 +79,17 @@ shared ({ caller }) actor class FileStorage(is_prod : Bool) = this {
 		return #ok("custodian");
 	};
 
+	public shared ({ caller }) func getCustodians() : async List.List<Principal> {
+		return custodians;
+	};
+
+	public shared ({ caller }) func test() : async {
+		isAdmin : Bool;
+		whoami : Principal;
+	} {
+		return { whoami = caller; isAdmin = isCustodian(caller) };
+	};
+
 	private func compare(a : AssetChunk, b : AssetChunk) : Order.Order {
 		if (a.order < b.order) {
 			return #less;
