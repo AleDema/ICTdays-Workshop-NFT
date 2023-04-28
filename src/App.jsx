@@ -9,7 +9,18 @@ import ErrorPage from './pages/ErrorPage';
 import AdminPage from './pages/AdminPage';
 import RedeemPage from './pages/RedeemPage';
 import ClaimPage from './pages/ClaimPage';
-import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
+import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister, useWallet } from "@connect2ic/react"
+import {
+  AstroX,
+  ICX,
+  defaultProviders,
+  PlugWallet,
+  InfinityWallet,
+  NFID,
+  StoicWallet,
+  InternetIdentity,
+  walletProviders,
+} from "@connect2ic/core/providers"
 import {
   createRoutesFromElements, Link, createBrowserRouter,
   RouterProvider,
@@ -17,32 +28,64 @@ import {
 } from "react-router-dom";
 import { useSnapshot } from 'valtio'
 import state from "./lib/state.js"
+//import { idlFactory as ledgerFactory } from "./lib/ledger.did.js"
 
 function App(props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isCustodian, setIsCustodian] = useState(false);
+  //const [ledgerCanister, setLedgerCanister] = useState(null);
   const [nfts, setNfts] = useState([]);
   const [nftCanister] = useCanister("DIP721")
+  //const [ledgerCanister] = useCanister("ledger")
   const snap = useSnapshot(state)
+  const [walletProvider] = useWallet()
   const { isConnected, principal, activeProvider } = useConnect({
     onConnect: () => {
       // Signed in
-      console.log("onConnect")
+      //console.log("onConnect")
     },
     onDisconnect: () => {
       // Signed out
-      console.log("onDisconnect")
+      //console.log("onDisconnect")
       disconnect()
     }
   })
+
+  useEffect(() => {
+    if (isConnected) {
+      console.log('walletProvider', walletProvider)
+      console.log('activeProvider', activeProvider)
+
+    }
+  }, [isConnected])
 
   const disconnect = async () => {
     //clean up state
     setIsCustodian(false)
     state.isAdmin = false;
     setLoading(null)
+    // setLedgerCanister(null)
     setNfts([])
+  }
+
+  const createLedgerActor = async (id) => {
+    const ledgerCanisterId = id
+    console.log(`Ledger Canister ID: ${ledgerCanisterId}`)
+    const ledgerActor = await activeProvider.createActor(ledgerCanisterId, ledgerFactory)
+    //console.log(nftActor)
+    //setLedgerCanister(ledgerActor.value)
+    return ledgerActor.value
+  }
+
+  const initLedger = async () => {
+
+    if (principal === null || principal === undefined) return;
+    if (storageCanister !== null) return;
+    const id = await nftCanister.get_ledger_canister_id();
+    if (id !== "") {
+      return await createLedgerActor(id)
+    }
   }
 
 
@@ -91,6 +134,14 @@ function App(props) {
     < >
       {principal !== undefined && nftCanister !== null &&
         <>
+          <p>{principal}</p>
+
+          <p>
+            {walletProvider?.wallets[0].principal}
+          </p>
+          <p>
+            {walletProvider?.wallets[0].accountId}
+          </p>
           <h2>NFTS</h2>
           {
             nfts.length > 0 ? (
