@@ -6,6 +6,7 @@ import { createClient } from "@connect2ic/core"
 import { Connect2ICProvider } from "@connect2ic/react"
 import "@connect2ic/core/style.css"
 import * as DIP721 from "../.dfx/local/canisters/DIP721"
+//import { idlFactory as ledgerFactory } from "./lib/ledger.did.js"
 
 let host = "https://mainnet.dfinity.network"
 if (process.env.DFX_NETWORK !== "ic") {
@@ -15,20 +16,19 @@ if (process.env.DFX_NETWORK !== "ic") {
 console.log(`Network: ${host}`)
 console.log(process.env.DIP721_CANISTER_ID)
 
+// console.log(process.env.FRONTEND_CANISTER_ID)
+// console.log(import.meta.env.DEV)
+
 const client = createClient({
   canisters: {
     DIP721
   },
   providers: defaultProviders,
   globalProviderConfig: {
-    // host: 'http://localhost:3000',
-    // dev: import.meta.env.DEV,
     dev: import.meta.env.DEV,
-    // ledgerCanisterId: "ryjl3-tyaaa-aaaaa-aaaba-cai",
-    // ledgerHost: "http://localhost:8000",
-    // whitelist: ["ryjl3-tyaaa-aaaaa-aaaba-cai"],
-    // delegationModes:['global'],
     whitelist: [process.env.DIP721_CANISTER_ID, process.env.FRONTEND_CANISTER_ID],
+    appName: "ICP PoAP",
+    autoConnect: false,
   },
 })
 

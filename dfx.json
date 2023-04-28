@@ -1,5 +1,5 @@
 {
-    "dfx": "0.13.1",
+    "dfx": "0.14.0",
     "defaults": {
         "build": {
             "packtool": "npm run --silent sources"
@@ -16,15 +16,6 @@
             "candid": "backend/ledger/icrc1.did"
         },
         "frontend": {
-            "type": "assets",
-            "frontend": {
-                "entrypoint": "dist/index.html"
-            },
-            "source": [
-                "dist/"
-            ]
-        },
-        "frontend2": {
             "type": "assets",
             "frontend": {
                 "entrypoint": "dist/index.html"

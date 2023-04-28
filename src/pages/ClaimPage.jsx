@@ -7,11 +7,11 @@ function ClaimPage() {
     const { isConnected, principal, activeProvider } = useConnect({
         onConnect: () => {
             // Signed in
-            console.log("onConnect")
+            //console.log("onConnect")
         },
         onDisconnect: () => {
             // Signed out
-            console.log("onDisconnect")
+            //console.log("onDisconnect")
         }
     })
     const [response, setResponse] = React.useState(null)

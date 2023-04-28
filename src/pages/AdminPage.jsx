@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import '../index.css';
 import motokoLogo from '../assets/motoko_moving.png';
 import motokoShadowLogo from '../assets/motoko_shadow.png';
-import { DIP721 } from '../declarations/DIP721';
+//import { DIP721 } from '../declarations/DIP721';
 import { idlFactory as storageFactory } from "../lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import EventCard from '../components/EventCard';

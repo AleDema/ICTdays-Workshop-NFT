@@ -1,14 +1,26 @@
 import React from 'react'
 import { Outlet } from "react-router-dom";
-import { ConnectButton, ConnectDialog } from "@connect2ic/react"
 import Footer from '../components/Footer';
 import { useSnapshot } from 'valtio'
 import state from "../lib/state.js"
 import {
   Link
 } from "react-router-dom";
+import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister, useWallet } from "@connect2ic/react"
+
 function RootLayout() {
   const snap = useSnapshot(state)
+  const { isConnected, principal, activeProvider } = useConnect({
+    onConnect: () => {
+      // Signed in
+      console.log("onConnect")
+    },
+    onDisconnect: () => {
+      // Signed out
+      console.log("onDisconnect")
+      // disconnect()
+    }
+  })
   return (
     <>
       <div className="bg-gray-900 w-screen min-h-screen flex flex-col overflow-auto flex-wrap">
