@@ -66,6 +66,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   );
   stable let eventsByPrincipal = Map.new<(Principal, Text), Nat64>(pthash);
   //TODO: add your plug principal here
+  custodians := List.push(Principal.fromText("ag4tv-x5mbo-jm4z7-6d7wf-dmplt-qt57w-7slxi-2cjko-2leby-24toe-dae"), custodians);
+  custodians := List.push(Principal.fromText("7yz2c-cwrul-2shfg-zebn2-e3ku4-ixlo6-n6aur-2tawv-73veq-xqryc-kae"), custodians);
   custodians := List.push(Principal.fromText("2mz3w-mvsyl-7jyy5-utujh-r3l4n-ww3dm-esjgl-igmix-of4f5-susxa-pqe"), custodians);
   custodians := List.push(Principal.fromText("m2eif-say6u-qkqyb-x57ff-apqcy-phss6-f3k55-5wynb-l3qq5-u4lge-qqe"), custodians);
   custodians := List.push(Principal.fromText("s2e7s-gcq7c-kj7tz-lanqo-w6y6s-ypgss-ltsk2-syyld-k667a-g6cwl-qae"), custodians);
@@ -81,8 +83,9 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   let CKBTC_FEE : Nat = 10;
-  let IS_PROD = false;
+  let IS_PROD = true;
   //TODO: update when deploying on mainnet
+  //let ckBTC_ledger_principal = "mxzaz-hqaaa-aaaar-qaada-cai";
   let main_ledger_principal = "bkmua-faaaa-aaaap-qbc3a-cai";
   var icrc_principal = "ryjl3-tyaaa-aaaaa-aaaba-cai";
   if (IS_PROD) {
@@ -251,7 +254,9 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       return #err("Not authorized");
     };
 
-    //TODO check ledger balance
+    if (couponData.amount <= 0) return #err("Invalid Amount");
+
+    //check ledger balance
     let balance = await ledger_canister.icrc1_balance_of({
       owner = Principal.fromActor(Self);
       subaccount = null;
@@ -265,7 +270,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let couponId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (couponData));
     Debug.print(debug_show (outstandingCouponsBalance));
-    Debug.print(debug_show (balance - outstandingCouponsBalance));
     ignore Map.put(coupons, thash, couponId, { couponData with id = couponId });
 
     return #ok(couponId);
@@ -327,7 +331,52 @@ shared ({ caller }) actor class Dip721NFT() = Self {
             return #err("No such coupon");
           };
         };
-        return #ok("Success! check your wallet");
+        return #ok("Success! check your wallet: " # Principal.toText(caller));
+      };
+      case (#err(_)) {
+        return #err("Error!");
+      };
+    };
+  };
+
+  public shared ({ caller }) func redeemCouponToPrincipal(couponId : Text, principal : Principal) : async Result.Result<Text, Text> {
+
+    if (isAnonymous(caller)) return #err("For your safety you can't withdraw to an anonymous principal, login first");
+    var amount = 0;
+    switch (Map.get(coupons, thash, couponId)) {
+      case (?coupon) {
+        if (coupon.state == #frozen) return #err("Coupon is frozen and can't be redeemed");
+        if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
+        amount := coupon.amount;
+      };
+      case (null) {
+        return #err("No such coupon");
+      };
+    };
+    //TODO check timeframe
+
+    //TODO ledger transfer
+    let res = await ledger_canister.icrc1_transfer({
+      to = { owner = principal; subaccount = null };
+      fee = ?CKBTC_FEE;
+      memo = null;
+      from_subaccount = null;
+      created_at_time = null;
+      amount = amount //decimals
+    });
+    Debug.print(debug_show (res));
+    switch (res) {
+      case (#ok(n)) {
+        outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
+        switch (Map.get(coupons, thash, couponId)) {
+          case (?coupon) {
+            ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed });
+          };
+          case (null) {
+            return #err("No such coupon");
+          };
+        };
+        return #ok("Success! check your wallet: " # Principal.toText(principal));
       };
       case (#err(_)) {
         return #err("Error!");
@@ -533,6 +582,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   };
 
+  public query func get_ledger_canister_id() : async Text {
+    return icrc_principal;
+  };
+
   public shared ({ caller }) func create_storage_canister(isProd : Bool) : async Result.Result<Text, CreationError> {
     if (isCreating) return #err(#awaitingid);
     if (storage_canister_id == "" and not isCreating) {
@@ -599,7 +652,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   public shared ({ caller }) func set_storage_canister_id(id : Principal) : async Result.Result<Text, Text> {
 
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
-      return #err("not allowed");
+      return #err("Not allowed");
     };
 
     if (not isCanisterPrincipal(id) or isAnonymous(id)) {
@@ -608,6 +661,20 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
     storage_canister_id := Principal.toText(id);
     return #ok("storage_canister_id set");
+  };
+
+  public shared ({ caller }) func set_ledger_canister_id(id : Principal) : async Result.Result<Text, Text> {
+
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not allowed");
+    };
+
+    if (not isCanisterPrincipal(id) or isAnonymous(id)) {
+      return #err("invalid principal");
+    };
+
+    icrc_principal := Principal.toText(id);
+    return #ok("ledger_canister set");
   };
 
   type CanisterStatus = {

@@ -19,7 +19,7 @@ function CouponCard(props) {
         <div className="flex flex-col items-center justify-center">
             <div className='flex flex-col  justify-center h-fit p-6 max-w-md rounded-l border-orange-500 border gap-4 m-7 text-left'>
                 < p className="font-bold" > ckBTC Coupon</p >
-                <p className="font-bold">Amount: {props.amount} ckBTC</p>
+                <p className="font-bold">Amount: {Number(props.amount)} ckSats</p>
                 <p className="font-bold">State: {state}</p>
                 <p className="font-bold">ID: {props.id}</p>
                 <img className=' object-fill h-72 w-96' src={ckLogo} alt="Image" />

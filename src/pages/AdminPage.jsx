@@ -72,11 +72,11 @@ function AdminPage(props) {
     const { isConnected, principal, activeProvider } = useConnect({
         onConnect: () => {
             // Signed in
-            console.log("onConnect")
+            //console.log("onConnect")
         },
         onDisconnect: () => {
             // Signed out
-            console.log("onDisconnect")
+            //console.log("onDisconnect")
             disconnect()
         }
     })
@@ -379,7 +379,6 @@ function AdminPage(props) {
         setLoading(false)
     }
 
-
     const handleChange = async () => { }
     const changeSelection = (selection) => {
         setCurrent(selection)
@@ -390,8 +389,8 @@ function AdminPage(props) {
             console.log("Init error!")
             return
         }
-
-        let res = await nftCanister.createCoupon({ id: "", state: { active: null }, limit: [], startDate: [], endDate: [], redeemer: [], amount: Number(couponAmountField.current.value) })
+        let normalizedAmount = Number(couponAmountField.current.value) * 1_000_000_00 //normalize for 8 decimals
+        let res = await nftCanister.createCoupon({ id: "", state: { active: null }, limit: [], startDate: [], endDate: [], redeemer: [], amount: normalizedAmount })
         console.log(res)
     }
 
@@ -485,7 +484,7 @@ function AdminPage(props) {
                             <div className='flex flex-col items-top justify-center gap-6 max-w-md mx-auto mb-10'>
                                 <div className='flex flex-col items-start gap-2 w-full'>
                                     <input type="number" id="couponamount" name="nftcouponamountname" className="px-2 py-1 rounded-lg w-full" ref={couponAmountField} placeholder="Coupon Amount" />
-                                    <p className='text-[12px] font-thin opacity-70'>Coupon Amount</p>
+                                    <p className='text-[12px] font-thin opacity-70'>BTC Coupon Amount</p>
                                 </div>
                                 <div className="flex flex-row gap-1">
                                     <p className='text-[12px] font-thin opacity-70'>Start Date</p>
