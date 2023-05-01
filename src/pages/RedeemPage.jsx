@@ -29,8 +29,8 @@ function RedeemPage() {
         // walletProvider.createActor
         //setResponse(JSON.stringify(walletProvider.ICX || "NOOOOOOOOOOOOOOOOOOOOO"))
         //  setResponse(JSON.stringify(walletProvider))
-        setResponse(` ${walletProvider?.meta?.name}`)
-        console.log(walletProvider)
+        // setResponse(` ${walletProvider?.meta?.name}`)
+        // console.log(walletProvider)
         // const ledgerActor = await walletProvider.createActor(process.env.DIP721_CANISTER_ID, ledgerFactory)
         //console.log(ledgerActor)
         //setResponse("2")
@@ -45,8 +45,8 @@ function RedeemPage() {
             res = await nftCanister.redeemCoupon(id)
         }
         //setResponse("3")
-        console.log(res)
-        setResponse(JSON.stringify(res))
+        // console.log(res)
+        // setResponse(JSON.stringify(res))
         //setResponse(res.ok || res.err)
         if (res.ok) {
             //setResponse("Success! You claimed the coupon, check your wallet.")

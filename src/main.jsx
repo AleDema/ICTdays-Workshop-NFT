@@ -25,8 +25,9 @@ if (process.env.DFX_NETWORK !== "ic") {
 }
 console.log(`Network: ${host}`)
 console.log(process.env.DIP721_CANISTER_ID)
+//console.log(process.env?.NODE_ENV)
 
-// console.log(process.env.FRONTEND_CANISTER_ID)
+// console.log(process.env.MOPS_ENV)
 console.log(import.meta.env.DEV)
 
 const client = createClient({

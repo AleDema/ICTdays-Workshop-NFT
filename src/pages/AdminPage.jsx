@@ -1,13 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import '../index.css';
-import motokoLogo from '../assets/motoko_moving.png';
-import motokoShadowLogo from '../assets/motoko_shadow.png';
 //import { DIP721 } from '../declarations/DIP721';
 import { idlFactory as storageFactory } from "../lib/storage.did.js"
 import { Principal } from '@dfinity/principal';
 import EventCard from '../components/EventCard';
 import CouponCard from '../components/CouponCard';
-import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister } from "@connect2ic/react"
+import { useConnect, useCanister } from "@connect2ic/react"
 import {
     createRoutesFromElements, Link, createBrowserRouter,
     RouterProvider,
@@ -57,6 +55,8 @@ function AdminPage(props) {
     const [events, setEvents] = useState([]);
     const [coupons, setCoupons] = useState([]);
     const [nftCanisterBalance, setNftCanisterBalance] = useState(0);
+    const [nftCanisterLedgerBalance, setNftCanisterLedgerBalance] = useState(0);
+    const [nftCanisterOustandingBalance, setNftCanisterOustandingBalance] = useState(0);
     const [storageCanisterBalance, setStorageCanisterBalance] = useState(0);
     const [storageCanisterBurn, setStorageCanisterBurn] = useState(0);
     const [storageCanisterMemory, setStorageCanisterMemory] = useState(0);
@@ -205,20 +205,11 @@ function AdminPage(props) {
             console.log("storageCanister !== null");
         }
         console.log(sc);
-        // const asset_unit8Array = await getUint8Array(file)
-        // const chunk = asset_unit8Array.slice(0, 2000000);
-        // let test = await sc.test()
-        // console.log(test)
-        // let res = await sc.create_chunk(batch_id, Array.from(chunk), 0);
-        // console.log(res);
-        // console.log(sc)
-        // let test = await sc.test()
-        // console.log(test)
         const uploadChunk = async ({ chunk, order }) => {
             //console.log(storageCanister)
             // console.log(storage)
             console.log("UPLOADING CHUNKS")
-            return sc.create_chunk(batch_id, chunk, order);
+            return sc.create_chunk(batch_id, Array.from(chunk), order);
         };
         const asset_unit8Array = await getUint8Array(file)
         console.log(asset_unit8Array)
@@ -240,7 +231,6 @@ function AdminPage(props) {
         }
 
         console.log("AWAITING")
-        console.log(promises)
         chunk_ids = await Promise.all(promises);
 
 
@@ -269,7 +259,6 @@ function AdminPage(props) {
         console.log("RETURNING ASSET")
         return asset;
     }
-
 
     const createEventNft = async () => {
         console.log(eventStartField.current.value)
@@ -309,7 +298,7 @@ function AdminPage(props) {
         const onChainFile = await uploadImage(storage_actor)
         if (!onChainFile) return;
 
-        nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", limit: [], startDate: [], endDate: [] })
+        nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", state: { active: null }, limit: [], startDate: [], endDate: [] })
         setLoading(false)
     }
 
@@ -351,6 +340,9 @@ function AdminPage(props) {
             let status = await nftCanister.get_status()
             console.log(status)
             setNftCanisterBalance(Number(status.nft_balance))
+            setNftCanisterLedgerBalance(Number(status.nft_ledger_balance))
+            setNftCanisterOustandingBalance(Number(status.outstanding_balance))
+            setNftCanisterBalance(Number(status.nft_balance))
             setStorageCanisterBalance(Number(status.storage_balance))
             setStorageCanisterBurn(Number(status.storage_daily_burn))
             setStorageCanisterMemory(Number(status.storage_memory_used))
@@ -361,12 +353,6 @@ function AdminPage(props) {
         }, 15000);
         return () => clearInterval(intervalId);
     }, [nftCanister, principal]);
-
-    useEffect(() => {
-        console.log("principal changed")
-        console.log(principal)
-        //initActors()
-    }, [principal]);
 
     return (
         <>
@@ -446,25 +432,25 @@ function AdminPage(props) {
 
                             </div>
                         </div>
-                        <div className='flex flex-col gap-2  self-start'>
-                            <h2>Status</h2>
+                        <div className='flex flex-col gap-2  self-start text-left'>
+                            <h2 className="text-center">Status</h2>
                             <p>NFT Canister Cycles: {nftCanisterBalance}</p>
                             <p>Storage Canister Cycles: {storageCanisterBalance}</p>
                             <p>Storage Daily Cycle Burn: {storageCanisterBurn}</p>
-                            <p>Storage Memory Usage: {storageCanisterMemory}</p>
-                            <p>Estimated lifetime: {storageCanisterMemory}</p>
-                            <p>Canister ckBTC balance: {storageCanisterMemory}</p>
-                            <p>Canister outstanding balance: {storageCanisterMemory}</p>
+                            <p>Storage Memory Usage: {storageCanisterMemory} MB</p>
+                            <p>Estimated lifetime: {nftCanisterBalance / storageCanisterBurn} days left</p>
+                            <p>Canister ckBTC balance: {nftCanisterLedgerBalance} ckSats</p>
+                            <p>Canister outstanding balance: {nftCanisterOustandingBalance} ckSats</p>
                         </div>
                     </div>
-                    <div className="flex flex-row gap-4 ml-[4.3rem]">
+                    <div className="flex flex-row gap-4 ml-[4.3rem] mt-10  mb-10">
                         <button onClick={() => changeSelection("events")}>Events</button>
                         <button onClick={() => changeSelection("coupons")}>Coupons</button>
                     </div>
                     {
                         current === "events" ?
                             <>
-                                <h2>Events</h2>
+                                <h2 className=" mb-10">Events</h2>
                                 {
                                     events.length > 0 ? (
                                         <div className="flex flex-row flex-wrap px-10">
@@ -472,7 +458,7 @@ function AdminPage(props) {
                                                 events.map((e, i) => {
                                                     return (
                                                         <>
-                                                            <EventCard id={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl}></EventCard>
+                                                            <EventCard id={e.id} mimeType={e.nftType} key={e.id} name={e.nftName} url={e.nftUrl} state={e.state}></EventCard>
                                                         </>
                                                     )
                                                 })

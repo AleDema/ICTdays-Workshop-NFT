@@ -35,6 +35,11 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     nftType : Text;
     nftUrl : Text;
     limit : ?Nat;
+    state : {
+      #active;
+      #ended;
+      #inactive;
+    };
   };
 
   type CouponStates = {
@@ -78,12 +83,12 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     logo_type = "img";
     data = "";
   };
-  stable var name : Text = "ICTdays NFT";
-  stable var symbol : Text = "ICT";
+  stable var name : Text = "ICP Italia Events";
+  stable var symbol : Text = "ICPIE";
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   let CKBTC_FEE : Nat = 10;
-  let IS_PROD = true;
+  let IS_PROD = false;
   //TODO: update when deploying on mainnet
   //let ckBTC_ledger_principal = "mxzaz-hqaaa-aaaar-qaada-cai";
   let main_ledger_principal = "bkmua-faaaa-aaaap-qbc3a-cai";
@@ -92,6 +97,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     icrc_principal := main_ledger_principal;
   };
   let ledger_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
+
+  ///////DIP721 INTERFACE///////////
 
   stable var storage_canister_id : Text = "";
   let null_address : Principal = Principal.fromText("aaaaa-aa");
@@ -223,31 +230,27 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return List.toArray(tokenIds);
   };
 
-  private func getEventMetadata(name : Text, fileType : Text, url : Text) : Types.MetadataDesc {
-    return [{
-      purpose = #Rendered;
-      key_val_data = [
-        {
-          key = "name";
-          val = #TextContent(name);
-        },
-        {
-          key = "contentType";
-          val = #TextContent(fileType);
-        },
-        {
-          key = "locationType";
-          val = #TextContent("url");
-        },
-        {
-          key = "location";
-          val = #TextContent(url);
-        },
+  public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #Err(#Unauthorized);
+    };
+    let newId = Nat64.fromNat(List.size(nfts));
+    let nft : Types.Nft = {
+      owner = to;
+      id = newId;
+      metadata = metadata;
+    };
 
-      ];
-      data = Blob.fromArray([]);
-    }];
+    nfts := List.push(nft, nfts);
+
+    transactionId += 1;
+    return #Ok({
+      token_id = newId;
+      id = transactionId;
+    });
   };
+
+  //// COUPONS //////////////////////
 
   public shared ({ caller }) func createCoupon(couponData : Coupon) : async Result.Result<Text, Text> {
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
@@ -256,7 +259,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
     if (couponData.amount <= 0) return #err("Invalid Amount");
 
-    //check ledger balance
     let balance = await ledger_canister.icrc1_balance_of({
       owner = Principal.fromActor(Self);
       subaccount = null;
@@ -265,6 +267,11 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     if (balance < couponData.amount + CKBTC_FEE + outstandingCouponsBalance) return #err("Not enough balance");
 
     outstandingCouponsBalance := outstandingCouponsBalance + couponData.amount + CKBTC_FEE;
+    canister_status := {
+      canister_status with
+      nft_ledger_balance = balance;
+      outstanding_balance = outstandingCouponsBalance;
+    };
 
     let fuzz = Fuzz.Fuzz();
     let couponId = fuzz.text.randomAlphanumeric(16);
@@ -294,8 +301,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
   };
 
-  public shared ({ caller }) func redeemCoupon(couponId : Text) : async Result.Result<Text, Text> {
-
+  private func redeemCouponInternal(couponId : Text, redeemer : Principal) : async Result.Result<Text, Text> {
     if (isAnonymous(caller)) return #err("For your safety you can't withdraw to an anonymous principal, login first");
     var amount = 0;
     switch (Map.get(coupons, thash, couponId)) {
@@ -310,9 +316,9 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
     //TODO check timeframe
 
-    //TODO ledger transfer
+    //ledger transfer
     let res = await ledger_canister.icrc1_transfer({
-      to = { owner = caller; subaccount = null };
+      to = { owner = redeemer; subaccount = null };
       fee = ?CKBTC_FEE;
       memo = null;
       from_subaccount = null;
@@ -323,15 +329,16 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     switch (res) {
       case (#ok(n)) {
         outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
+        ignore update_status(#update_ledger_balance);
         switch (Map.get(coupons, thash, couponId)) {
           case (?coupon) {
-            ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed });
+            ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
           };
           case (null) {
             return #err("No such coupon");
           };
         };
-        return #ok("Success! check your wallet: " # Principal.toText(caller));
+        return #ok("Success! check your wallet: " # Principal.toText(redeemer));
       };
       case (#err(_)) {
         return #err("Error!");
@@ -339,49 +346,12 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
   };
 
+  public shared ({ caller }) func redeemCoupon(couponId : Text) : async Result.Result<Text, Text> {
+    return await redeemCouponInternal(couponId, caller);
+  };
+
   public shared ({ caller }) func redeemCouponToPrincipal(couponId : Text, principal : Principal) : async Result.Result<Text, Text> {
-
-    if (isAnonymous(caller)) return #err("For your safety you can't withdraw to an anonymous principal, login first");
-    var amount = 0;
-    switch (Map.get(coupons, thash, couponId)) {
-      case (?coupon) {
-        if (coupon.state == #frozen) return #err("Coupon is frozen and can't be redeemed");
-        if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
-        amount := coupon.amount;
-      };
-      case (null) {
-        return #err("No such coupon");
-      };
-    };
-    //TODO check timeframe
-
-    //TODO ledger transfer
-    let res = await ledger_canister.icrc1_transfer({
-      to = { owner = principal; subaccount = null };
-      fee = ?CKBTC_FEE;
-      memo = null;
-      from_subaccount = null;
-      created_at_time = null;
-      amount = amount //decimals
-    });
-    Debug.print(debug_show (res));
-    switch (res) {
-      case (#ok(n)) {
-        outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
-        switch (Map.get(coupons, thash, couponId)) {
-          case (?coupon) {
-            ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed });
-          };
-          case (null) {
-            return #err("No such coupon");
-          };
-        };
-        return #ok("Success! check your wallet: " # Principal.toText(principal));
-      };
-      case (#err(_)) {
-        return #err("Error!");
-      };
-    };
+    return await redeemCouponInternal(couponId, principal);
   };
 
   public shared ({ caller }) func updateCouponState(couponId : Text, newState : { #active; #frozen }) : async Result.Result<Text, Text> {
@@ -411,13 +381,45 @@ shared ({ caller }) actor class Dip721NFT() = Self {
         if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
 
         ignore Map.remove(coupons, thash, couponId);
-        outstandingCouponsBalance := outstandingCouponsBalance - coupon.amount;
+        outstandingCouponsBalance := outstandingCouponsBalance - coupon.amount - CKBTC_FEE;
+        canister_status := {
+          canister_status with
+          outstanding_balance = outstandingCouponsBalance;
+        };
         return #ok("Coupon Deleted");
       };
       case (null) {
         return #err("No coupon with this ID");
       };
     };
+  };
+
+  //// EVENTS //////////////////////
+
+  private func getEventMetadata(name : Text, fileType : Text, url : Text) : Types.MetadataDesc {
+    return [{
+      purpose = #Rendered;
+      key_val_data = [
+        {
+          key = "name";
+          val = #TextContent(name);
+        },
+        {
+          key = "contentType";
+          val = #TextContent(fileType);
+        },
+        {
+          key = "locationType";
+          val = #TextContent("url");
+        },
+        {
+          key = "location";
+          val = #TextContent(url);
+        },
+
+      ];
+      data = Blob.fromArray([]);
+    }];
   };
 
   public shared ({ caller }) func createEventNft(eventData : Event) : async Result.Result<Text, Text> {
@@ -429,7 +431,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let eventId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (eventData));
     ignore Map.put(events, thash, eventId, { eventData with id = eventId });
-    ignore update_status();
+    ignore update_status(#update_cycle_balance);
     return #ok(eventId);
   };
 
@@ -452,22 +454,53 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
   };
 
+  public shared ({ caller }) func updateEventState(eventId : Text, newState : { #active; #ended; #inactive }) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not Authorized");
+    };
+    switch (Map.get(events, thash, eventId)) {
+      case (?event) {
+        //ignore Map.remove(coupons, thash, couponId);
+        Map.set(events, thash, eventId, { event with state = newState });
+        return #ok("Event Updated");
+      };
+      case (null) {
+        return #err("No event with this ID");
+      };
+    };
+  };
+
   public shared ({ caller }) func claimEventNft(id : Text) : async Result.Result<Text, Text> {
 
     // get event metadata
     var nftName = "ERROR";
     var nftType = "ERROR";
     var nftUrl = "ERROR";
+    var eventState : { #active; #ended; #inactive } = #ended;
     switch (Map.get(events, thash, id)) {
       case (?exists) {
         nftName := exists.nftName;
         nftType := exists.nftType;
         nftUrl := exists.nftUrl;
+        eventState := exists.state;
       };
       case (null) {
         return #err("No such event");
       };
     };
+
+    switch (eventState) {
+      case (#active) {
+
+      };
+      case (#ended) {
+        return #err("The event is over");
+      };
+      case (#inactive) {
+        return #err("The event hasn't started yet");
+      };
+    };
+
     //TODO check timeframe
 
     //check if user has already redeemed
@@ -491,26 +524,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
         return #ok(Nat64.toText(newId));
       };
     };
-  };
-
-  public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {
-    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
-      return #Err(#Unauthorized);
-    };
-    let newId = Nat64.fromNat(List.size(nfts));
-    let nft : Types.Nft = {
-      owner = to;
-      id = newId;
-      metadata = metadata;
-    };
-
-    nfts := List.push(nft, nfts);
-
-    transactionId += 1;
-    return #Ok({
-      token_id = newId;
-      id = transactionId;
-    });
   };
 
   /////////////////ADMIN////////////////////////////////////
@@ -679,6 +692,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   type CanisterStatus = {
     nft_balance : Nat;
+    nft_ledger_balance : Nat;
+    outstanding_balance : Nat;
     storage_balance : Nat;
     storage_memory_used : Nat;
     storage_daily_burn : Nat;
@@ -687,6 +702,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   stable var canister_status : CanisterStatus = {
     nft_balance = Cycles.balance();
+    nft_ledger_balance = 0;
+    outstanding_balance = 0;
     storage_balance = 0;
     storage_memory_used = 0;
     storage_daily_burn = 0;
@@ -698,25 +715,44 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   };
 
   //todo check
-  private func update_status() : async () {
-    if (storage_canister_id == "") {
-      canister_status := {
-        canister_status with nft_balance = Cycles.balance();
-      };
-      return;
-    };
+  private func update_status(action : { #update_ledger_balance; #update_cycle_balance }) : async () {
+    switch (action) {
+      case (#update_ledger_balance) {
+        let balance = await ledger_canister.icrc1_balance_of({
+          owner = Principal.fromActor(Self);
+          subaccount = null;
+        });
 
-    let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
-    let res = await management_canister_actor.canister_status({
-      canister_id = Principal.fromText(storage_canister_id);
-    });
-    Debug.print(debug_show (res.settings.controllers));
-    canister_status := {
-      nft_balance = Cycles.balance();
-      storage_balance = res.cycles;
-      storage_memory_used = res.memory_size;
-      storage_daily_burn = res.idle_cycles_burned_per_day;
-      controllers = res.settings.controllers;
+        canister_status := {
+          canister_status with
+          nft_ledger_balance = balance;
+          outstanding_balance = outstandingCouponsBalance;
+        };
+
+      };
+      case (#update_cycle_balance) {
+        if (storage_canister_id == "") {
+          canister_status := {
+            canister_status with nft_balance = Cycles.balance();
+          };
+          return;
+        };
+
+        let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
+        let res = await management_canister_actor.canister_status({
+          canister_id = Principal.fromText(storage_canister_id);
+        });
+        Debug.print(debug_show (res.settings.controllers));
+        canister_status := {
+          canister_status with
+          nft_balance = Cycles.balance();
+          outstanding_balance = outstandingCouponsBalance;
+          storage_balance = res.cycles;
+          storage_memory_used = res.memory_size;
+          storage_daily_burn = res.idle_cycles_burned_per_day;
+          controllers = res.settings.controllers;
+        };
+      };
     };
 
     return;

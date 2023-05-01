@@ -128,14 +128,14 @@ function App(props) {
     < >
       {principal !== undefined && nftCanister !== null &&
         <>
-          <p>{principal}</p>
+          {/* <p>{principal}</p>
 
           <p>
             {walletProvider?.wallets[0].principal}
           </p>
           <p>
             {walletProvider?.wallets[0].accountId}
-          </p>
+          </p> */}
           <h2>NFTS</h2>
           {
             nfts.length > 0 ? (

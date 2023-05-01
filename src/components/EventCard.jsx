@@ -1,5 +1,22 @@
 import React from 'react'
 import { Link } from "react-router-dom";
+import { useCanister } from "@connect2ic/react"
+
+const options = [
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+];
+
+const copyToClipboard = async (path) => {
+    const { origin, pathname } = window.location;
+    try {
+        await navigator.clipboard.writeText(`${origin}${pathname}${path}`);
+        console.log(`${origin}${pathname}${path}`)
+        console.log('Text copied to clipboard');
+    } catch (error) {
+        console.error('Failed to copy text: ', error);
+    }
+};
 
 function FileRenderer(props) {
     const { mimeType, src } = props;
@@ -18,9 +35,32 @@ function FileRenderer(props) {
 
 
 function EventCard(props) {
+
+    const [nftCanister] = useCanister("DIP721")
+    const [newState, setNewState] = React.useState({ active: null })
+    const handleChange = async (value) => {
+        console.log(value)
+        if (value === "active") {
+            setNewState({ active: null })
+        } else if (value === "inactive") {
+            setNewState({ inactive: null })
+        }
+    }
+    const updateEvent = async () => {
+        const res = await nftCanister.updateEventState(props.id, newState);
+        console.log(res)
+    }
+
+
+    let state = "Active"
+    if (props.state.inactive === null) {
+        state = "Inactive"
+    }
+
     return (
         <div className='flex flex-col items-center justify-center h-fit p-6 max-w-md rounded-l border-sky-600 border gap-4 m-7'>
-            <p className="font-bold">{props.name}</p>
+            <p className="font-bold">Name: {props.name}</p>
+            <p className="font-bold">Status: {state}</p>
             <FileRenderer src={props.url} mimeType={props.mimeType}></FileRenderer>
             {
                 props.isClaim ?
@@ -29,9 +69,20 @@ function EventCard(props) {
                     </>
                     :
                     <>
+                        <div>
+                            <select className="w-full px-2 py-1 rounded-lg" onChange={(e) => handleChange(e.target.value)}>
+                                {options.map((option) => (
+                                    <option className="text-white w-full" key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <button className="ml-2 mb-2 bg-[#0C93EA]" onClick={updateEvent}>Update</button>
+                        </div>
                         <Link to={`/claimnft/${props.id}`} key={props.id}>
                             <button className="ml-2 mb-2 bg-[#0C93EA]">Go to page</button>
                         </Link>
+                        <button className="ml-2 mb-2 bg-[#0C93EA]" onClick={() => copyToClipboard(`/claimnft/${props.id}`)}>Copy Link</button>
                     </>
             }
         </div>
