@@ -11,8 +11,8 @@ const options = [
 const copyToClipboard = async (path) => {
     const { origin, pathname } = window.location;
     try {
-        await navigator.clipboard.writeText(`${origin}${pathname}${path}`);
-        console.log(`${origin}${pathname}${path}`)
+        await navigator.clipboard.writeText(`${origin}${path}`);
+        console.log(`${origin}${path}`)
         console.log('Text copied to clipboard');
     } catch (error) {
         console.error('Failed to copy text: ', error);

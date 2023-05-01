@@ -23,7 +23,7 @@ function Card(props) {
     const addressField = useRef(null)
     return (
         <div className='flex flex-col items-center justify-center h-fit p-6 max-w-md rounded-lg border-indigo-800 border gap-4 m-7'>
-            <p className="font-bold">{props.name}</p>
+            <p className="font-bold">Name: {props.name}</p>
             <FileRenderer src={props.url} mimeType={props.mimeType}></FileRenderer>
 
             <div className='flex flex-col items-start gap-2 w-full'>

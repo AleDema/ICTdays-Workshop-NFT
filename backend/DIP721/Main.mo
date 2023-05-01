@@ -24,6 +24,7 @@ import Timer "mo:base/Timer";
 import ICRCTypes "../ledger/Types";
 import Int "mo:base/Int";
 import Int64 "mo:base/Int64";
+import Time "mo:base/Time";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
 
@@ -40,6 +41,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       #ended;
       #inactive;
     };
+    creationDate : Int;
   };
 
   type CouponStates = {
@@ -396,7 +398,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   //// EVENTS //////////////////////
 
-  private func getEventMetadata(name : Text, fileType : Text, url : Text) : Types.MetadataDesc {
+  private func getEventMetadata(name : Text, fileType : Text, url : Text, eventId : Text) : Types.MetadataDesc {
     return [{
       purpose = #Rendered;
       key_val_data = [
@@ -416,6 +418,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           key = "location";
           val = #TextContent(url);
         },
+        {
+          key = "eventId";
+          val = #TextContent(eventId);
+        },
 
       ];
       data = Blob.fromArray([]);
@@ -430,7 +436,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let fuzz = Fuzz.Fuzz();
     let eventId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (eventData));
-    ignore Map.put(events, thash, eventId, { eventData with id = eventId });
+    let event = { eventData with id = eventId; creationDate = Time.now() };
+    Debug.print(debug_show (event));
+    ignore Map.put(events, thash, eventId, event);
+    //Debug.print(debug_show (events));
     ignore update_status(#update_cycle_balance);
     return #ok(eventId);
   };
@@ -476,6 +485,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     var nftName = "ERROR";
     var nftType = "ERROR";
     var nftUrl = "ERROR";
+    var eventId = "ERROR";
     var eventState : { #active; #ended; #inactive } = #ended;
     switch (Map.get(events, thash, id)) {
       case (?exists) {
@@ -483,6 +493,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
         nftType := exists.nftType;
         nftUrl := exists.nftUrl;
         eventState := exists.state;
+        eventId := exists.id;
       };
       case (null) {
         return #err("No such event");
@@ -514,7 +525,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
         let nft : Types.Nft = {
           owner = caller;
           id = newId;
-          metadata = getEventMetadata(nftName, nftType, nftUrl);
+          metadata = getEventMetadata(nftName, nftType, nftUrl, eventId);
         };
 
         nfts := List.push(nft, nfts);

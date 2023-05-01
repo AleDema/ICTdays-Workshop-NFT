@@ -298,7 +298,8 @@ function AdminPage(props) {
         const onChainFile = await uploadImage(storage_actor)
         if (!onChainFile) return;
 
-        nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", state: { active: null }, limit: [], startDate: [], endDate: [] })
+        const res = await nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", state: { active: null }, limit: [], startDate: [], endDate: [], creationDate: 0 })
+        console.log(res)
         setLoading(false)
     }
 
@@ -320,6 +321,7 @@ function AdminPage(props) {
     const fetchData = async () => {
         if (nftCanister === null || principal === undefined) return
         const events = await nftCanister.getEvents();
+        console.log("events")
         console.log(events)
         if (events.ok) {
             setEvents(events.ok);

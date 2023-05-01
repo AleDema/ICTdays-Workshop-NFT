@@ -10,8 +10,8 @@ const options = [
 const copyToClipboard = async (path) => {
     const { origin, pathname } = window.location;
     try {
-        await navigator.clipboard.writeText(`${origin}${pathname}${path}`);
-        console.log(`${origin}${pathname}${path}`)
+        await navigator.clipboard.writeText(`${origin}${path}`);
+        console.log(`${origin}${path}`)
         console.log('Text copied to clipboard');
     } catch (error) {
         console.error('Failed to copy text: ', error);
@@ -51,9 +51,9 @@ function EventCard(props) {
         console.log(res)
     }
 
-
+    console.log(props)
     let state = "Active"
-    if (props.state.inactive === null) {
+    if (props.state?.inactive === null) {
         state = "Inactive"
     }
 
