@@ -439,7 +439,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let event = { eventData with id = eventId; creationDate = Time.now() };
     Debug.print(debug_show (event));
     ignore Map.put(events, thash, eventId, event);
-    //Debug.print(debug_show (events));
     ignore update_status(#update_cycle_balance);
     return #ok(eventId);
   };
