@@ -128,6 +128,7 @@ function App(props) {
     < >
       {principal !== undefined && nftCanister !== null &&
         <>
+          <p>{principal}</p>
           {/* <p>{principal}</p>
 
           <p>

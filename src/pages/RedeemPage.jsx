@@ -36,7 +36,8 @@ function RedeemPage() {
         //setResponse("2")
         let res;
         if (walletProvider?.meta?.name === "ICX") {
-            setResponse(walletProvider?.wallets[0].principal)
+            //setResponse(walletProvider?.wallets[0].principal)
+            setResponse("Redeeming")
             let principal = Principal.fromText(walletProvider?.wallets[0].principal)
             res = await nftCanister.redeemCouponToPrincipal(id, principal)
         }

@@ -81,6 +81,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   custodians := List.push(Principal.fromText("ig5qb-sewk3-rxbg6-o7x6w-ns7re-g76um-7wgqr-wcgmp-m53x6-chnps-lae"), custodians);
   custodians := List.push(Principal.fromText("qvpnf-i5sl6-ivj2f-qzood-h364x-kopvb-lxy2k-yh2xf-dh4hg-oy2pl-dqe"), custodians);
   custodians := List.push(Principal.fromText("whaio-wy2tv-opnm3-4ld63-avbfc-zptux-663rl-mhejh-x5szu-45r6s-lqe"), custodians);
+  custodians := List.push(Principal.fromText("lthbc-s7c4h-3oo2v-olnlk-kvil4-p34hi-26t5g-4ciyd-di65k-hbh5n-hae"), custodians);
+  custodians := List.push(Principal.fromText("ongl2-c2ceb-mfxvy-63cc7-tmil7-xznc6-wmy2y-sqb6f-cs546-2l23t-wae"), custodians);
   stable var logo : Types.LogoResult = {
     logo_type = "img";
     data = "";
@@ -90,15 +92,15 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   let CKBTC_FEE : Nat = 10;
-  let IS_PROD = false;
+  let IS_PROD = true;
   //TODO: update when deploying on mainnet
-  //let ckBTC_ledger_principal = "mxzaz-hqaaa-aaaar-qaada-cai";
-  let main_ledger_principal = "bkmua-faaaa-aaaap-qbc3a-cai";
+  let main_ledger_principal = "mxzaz-hqaaa-aaaar-qaada-cai"; //ckBTC_ledger_principal
+  //let main_ledger_principal = "bkmua-faaaa-aaaap-qbc3a-cai";
   var icrc_principal = "ryjl3-tyaaa-aaaaa-aaaba-cai";
   if (IS_PROD) {
     icrc_principal := main_ledger_principal;
   };
-  let ledger_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
+  // let ledger_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
 
   ///////DIP721 INTERFACE///////////
 
@@ -261,6 +263,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
     if (couponData.amount <= 0) return #err("Invalid Amount");
 
+    let ledger_canister : ICRCTypes.TokenInterface = actor (icrc_principal);
     let balance = await ledger_canister.icrc1_balance_of({
       owner = Principal.fromActor(Self);
       subaccount = null;
@@ -319,31 +322,89 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     //TODO check timeframe
 
     //ledger transfer
-    let res = await ledger_canister.icrc1_transfer({
-      to = { owner = redeemer; subaccount = null };
-      fee = ?CKBTC_FEE;
-      memo = null;
-      from_subaccount = null;
-      created_at_time = null;
-      amount = amount //decimals
-    });
-    Debug.print(debug_show (res));
-    switch (res) {
-      case (#ok(n)) {
-        outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
-        ignore update_status(#update_ledger_balance);
-        switch (Map.get(coupons, thash, couponId)) {
-          case (?coupon) {
-            ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
+    //for whatever reason Motoko uses #ok instead of #Ok for variants so return type changes based on how the icrc1 canister is implemented
+    if (Text.equal(icrc_principal, "mxzaz-hqaaa-aaaar-qaada-cai")) {
+      let ledger_canister : ICRCTypes.RustTokenInterface = actor (icrc_principal);
+      let res = await ledger_canister.icrc1_transfer({
+        to = { owner = redeemer; subaccount = null };
+        fee = ?CKBTC_FEE;
+        memo = null;
+        from_subaccount = null;
+        created_at_time = null;
+        amount = amount //decimals
+      });
+      Debug.print(debug_show (res));
+      switch (res) {
+        case (#Ok(n)) {
+          outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
+          ignore update_status(#update_ledger_balance);
+          switch (Map.get(coupons, thash, couponId)) {
+            case (?coupon) {
+              ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
+            };
+            case (null) {
+              return #err("No such coupon");
+            };
           };
-          case (null) {
-            return #err("No such coupon");
-          };
+          return #ok("Success! check your wallet");
         };
-        return #ok("Success! check your wallet: " # Principal.toText(redeemer));
+        case (#Err(#GenericError(e))) {
+          return #err("Error GenericError!");
+        };
+        case (#Err(#TemporarilyUnavailable(e))) {
+          return #err("Error TemporarilyUnavailable!");
+        };
+        case (#Err(#BadBurn(e))) {
+          return #err("Error BadBurn!");
+        };
+        case (#Err(#Duplicate(e))) {
+          return #err("Error Duplicate!");
+        };
+        case (#Err(#BadFee(e))) {
+          return #err("Error BadFee!");
+        };
+        case (#Err(#CreatedInFuture(e))) {
+          return #err("Error CreatedInFuture!");
+        };
+        case (#Err(#TooOld(e))) {
+          return #err("Error TooOld!");
+        };
+        case (#Err(#InsufficientFunds(balance))) {
+          return #err("Error InsufficientFunds! ");
+        };
+        case (#Err(_)) {
+          return #err("Error redeeming!");
+        };
       };
-      case (#err(_)) {
-        return #err("Error!");
+
+    } else {
+      let ledger_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
+      let res = await ledger_canister.icrc1_transfer({
+        to = { owner = redeemer; subaccount = null };
+        fee = ?CKBTC_FEE;
+        memo = null;
+        from_subaccount = null;
+        created_at_time = null;
+        amount = amount //decimals
+      });
+      Debug.print(debug_show (res));
+      switch (res) {
+        case (#ok(n)) {
+          outstandingCouponsBalance := outstandingCouponsBalance - amount - CKBTC_FEE;
+          ignore update_status(#update_ledger_balance);
+          switch (Map.get(coupons, thash, couponId)) {
+            case (?coupon) {
+              ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
+            };
+            case (null) {
+              return #err("No such coupon");
+            };
+          };
+          return #ok("Success! check your wallet");
+        };
+        case (#err(_)) {
+          return #err("Error!");
+        };
       };
     };
   };
@@ -609,6 +670,14 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return icrc_principal;
   };
 
+  public shared ({ caller }) func setLedgerCanisterId(id : Principal) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("Not Authorized");
+    };
+    icrc_principal := Principal.toText(id);
+    return #ok(icrc_principal);
+  };
+
   public shared ({ caller }) func create_storage_canister(isProd : Bool) : async Result.Result<Text, CreationError> {
     if (isCreating) return #err(#awaitingid);
     if (storage_canister_id == "" and not isCreating) {
@@ -728,6 +797,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   private func update_status(action : { #update_ledger_balance; #update_cycle_balance }) : async () {
     switch (action) {
       case (#update_ledger_balance) {
+        let ledger_canister : ICRCTypes.RustTokenInterface = actor (icrc_principal);
         let balance = await ledger_canister.icrc1_balance_of({
           owner = Principal.fromActor(Self);
           subaccount = null;
@@ -794,20 +864,3 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return false;
   };
 };
-
-// public shared ({ caller }) func get_status() : async Result.Result<CanisterStatus, Text> {
-//   if (storage_canister_id == "") return #err("No storage canister");
-
-//   let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
-//   let res = await management_canister_actor.canister_status({
-//     canister_id = Principal.fromText(storage_canister_id);
-//   });
-//   Debug.print(debug_show (res.settings.controllers));
-//   return #ok({
-//     nft_balance = Cycles.balance();
-//     storage_balance = res.cycles;
-//     storage_memory_used = res.memory_size;
-//     storage_daily_burn = res.idle_cycles_burned_per_day;
-//     controllers = res.settings.controllers;
-//   });
-// };
