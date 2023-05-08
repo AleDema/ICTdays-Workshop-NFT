@@ -306,6 +306,18 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     };
   };
 
+  private func changeCouponState(couponId : Text, redeemer : ?Principal, newState : { #redeemed; #active }) : Result.Result<Text, Text> {
+    switch (Map.get(coupons, thash, couponId)) {
+      case (?coupon) {
+        ignore Map.put(coupons, thash, couponId, { coupon with state = newState; redeemer = redeemer });
+        return #ok("state changed");
+      };
+      case (null) {
+        return #err("No such coupon");
+      };
+    };
+  };
+
   private func redeemCouponInternal(couponId : Text, redeemer : Principal) : async Result.Result<Text, Text> {
     if (isAnonymous(caller)) return #err("For your safety you can't withdraw to an anonymous principal, login first");
     var amount = 0;
@@ -313,6 +325,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       case (?coupon) {
         if (coupon.state == #frozen) return #err("Coupon is frozen and can't be redeemed");
         if (coupon.state == #redeemed) return #err("Coupon has already been redeemed");
+        //This is done to prevent multiple users from redeeming same coupon due to icrc1_transfer being an async and possibly cross subnet call
+        ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
         amount := coupon.amount;
       };
       case (null) {
@@ -323,6 +337,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
     //ledger transfer
     //for whatever reason Motoko uses #ok instead of #Ok for variants so return type changes based on how the icrc1 canister is implemented
+    // fix correctly by updating ICRC1 motoko ledger
     if (Text.equal(icrc_principal, "mxzaz-hqaaa-aaaar-qaada-cai")) {
       let ledger_canister : ICRCTypes.RustTokenInterface = actor (icrc_principal);
       let res = await ledger_canister.icrc1_transfer({
@@ -340,7 +355,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           ignore update_status(#update_ledger_balance);
           switch (Map.get(coupons, thash, couponId)) {
             case (?coupon) {
-              ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
+              //ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
             };
             case (null) {
               return #err("No such coupon");
@@ -349,30 +364,39 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           return #ok("Success! check your wallet");
         };
         case (#Err(#GenericError(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error GenericError!");
         };
         case (#Err(#TemporarilyUnavailable(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error TemporarilyUnavailable!");
         };
         case (#Err(#BadBurn(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error BadBurn!");
         };
         case (#Err(#Duplicate(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error Duplicate!");
         };
         case (#Err(#BadFee(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error BadFee!");
         };
         case (#Err(#CreatedInFuture(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error CreatedInFuture!");
         };
         case (#Err(#TooOld(e))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error TooOld!");
         };
         case (#Err(#InsufficientFunds(balance))) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error InsufficientFunds! ");
         };
         case (#Err(_)) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error redeeming!");
         };
       };
@@ -394,7 +418,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           ignore update_status(#update_ledger_balance);
           switch (Map.get(coupons, thash, couponId)) {
             case (?coupon) {
-              ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
+              //ignore Map.put(coupons, thash, couponId, { coupon with state = #redeemed; redeemer = ?redeemer });
             };
             case (null) {
               return #err("No such coupon");
@@ -403,6 +427,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           return #ok("Success! check your wallet");
         };
         case (#err(_)) {
+          ignore changeCouponState(couponId, null, #active);
           return #err("Error!");
         };
       };
