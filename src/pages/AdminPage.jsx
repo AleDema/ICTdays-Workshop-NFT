@@ -61,6 +61,7 @@ function AdminPage(props) {
     const [storageCanisterBurn, setStorageCanisterBurn] = useState(0);
     const [storageCanisterMemory, setStorageCanisterMemory] = useState(0);
     const nftNameField = useRef(null)
+    const nftDescriptionField = useRef(null)
     const nftUrlField = useRef(null)
     const eventStartField = useRef(null)
     const eventEndField = useRef(null)
@@ -298,7 +299,7 @@ function AdminPage(props) {
         const onChainFile = await uploadImage(storage_actor)
         if (!onChainFile) return;
 
-        const res = await nftCanister.createEventNft({ nftName: nftNameField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", state: { active: null }, limit: [], startDate: [], endDate: [], creationDate: 0 })
+        const res = await nftCanister.createEventNft({ transactionId: 0, nftName: nftNameField.current.value, description: nftDescriptionField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", state: { active: null }, limit: [], startDate: [], endDate: [], creationDate: 0 })
         console.log(res)
         setLoading(false)
     }
@@ -373,6 +374,11 @@ function AdminPage(props) {
                                 <div className='flex flex-col items-start gap-2 w-full'>
                                     <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftNameField} placeholder="Event Name" />
                                     <p className='text-[12px] font-thin opacity-70'>Insert the name of your event</p>
+                                </div>
+
+                                <div className='flex flex-col items-start gap-2 w-full'>
+                                    <input type="text" id="nftname" name="nftname" className="px-2 py-1 rounded-lg w-full" ref={nftDescriptionField} placeholder="Event Name" />
+                                    <p className='text-[12px] font-thin opacity-70'>Insert the description of your event</p>
                                 </div>
 
                                 <div className="flex flex-col items-start gap-2 w-full">

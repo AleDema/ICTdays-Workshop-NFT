@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { useConnect, useCanister } from "@connect2ic/react"
-import EventCard from '../components/EventCard';
+import NftCard from '../components/NftCard';
 function ClaimPage() {
 
     const { isConnected, principal, activeProvider } = useConnect({
@@ -49,7 +49,7 @@ function ClaimPage() {
             {isConnected ?
                 <div className="flex flex-col">
                     <Suspense fallback={<div>Loading...</div>}>
-                        {event && <EventCard claimNft={claimNft} isClaim={true} id={id} mimeType={event?.nftType || "img"} key={id} name={event?.nftName} url={event?.nftUrl} state={event.state}></EventCard>}
+                        {event && <NftCard claimNft={claimNft} isClaim={true} id={id} description={event?.description} mimeType={event?.nftType || "img"} key={id} name={event?.nftName} url={event?.nftUrl} state={event.state}></NftCard>}
                     </Suspense>
                     {response &&
                         <p>{response}</p>

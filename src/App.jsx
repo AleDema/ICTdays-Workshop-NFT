@@ -17,6 +17,7 @@ import {
 } from "react-router-dom";
 import { useSnapshot } from 'valtio'
 import state from "./lib/state.js"
+import NftCard from './components/NftCard';
 //import { idlFactory as ledgerFactory } from "./lib/ledger.did.js"
 
 function App(props) {
@@ -80,7 +81,7 @@ function App(props) {
 
   const transferNft = async (id, address) => {
     console.log(`Transfer to: ${address} NFT with id: ${id}`)
-    let receipt = await nftCanister.transferFromDip721(principal, Principal.fromText(address), id)
+    let receipt = await nftCanister.transferFromDip721(Principal.fromText(principal), Principal.fromText(address), id)
     if (!receipt.Ok) return;
     setNfts((oldNfts) => {
       return oldNfts.filter((item, i) => item.token_id !== id);
@@ -128,7 +129,6 @@ function App(props) {
     < >
       {principal !== undefined && nftCanister !== null &&
         <>
-          <p>{principal}</p>
           {/* <p>{principal}</p>
 
           <p>
@@ -137,25 +137,28 @@ function App(props) {
           <p>
             {walletProvider?.wallets[0].accountId}
           </p> */}
-          <h2>NFTS</h2>
+          <h2 className='font-bold'>My Collection</h2>
           {
             nfts.length > 0 ? (
-              <div className="flex flex-row flex-wrap px-10">
+              <div className="flex flex-row flex-wrap gap-10 justify-around m-auto">
                 {
                   nfts.map((e, i) => {
-                    let name, url, mimeType;
+                    let name, description, url, mimeType, nftId;
                     //console.log(e)
                     e[0].key_val_data.forEach((item, index) => {
                       if (item.key == "name") name = item.val.TextContent;
                       else if (item.key == "location") url = item.val.TextContent;
                       else if (item.key == "contentType") mimeType = item.val.TextContent;
+                      else if (item.key == "nftId") nftId = Number(item.val.NatContent);
+                      else if (item.key == "description") description = item.val.TextContent;
                     })
                     return (
-                      <Card tokenId={e.token_id} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft}></Card>
+                      // <Card tokenId={e.token_id} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft}></Card>
+                      <NftCard tokenId={e.token_id} nftId={nftId} description={description} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft} isClaim={false}></NftCard>
                     )
                   })
                 }
-              </div>) : (<div className="flex justify-center items-center" >You don't have any NFTs</div>)
+              </div>) : (<div className="flex justify-center items-center mt-5" >You don't have any NFTs</div>)
           }
         </>
       }

@@ -1,9 +1,9 @@
 import React from 'react'
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanister, useWallet } from "@connect2ic/react"
-import CouponCard from '../components/CouponCard';
 import { useLocation } from 'react-router-dom';
 import { Principal } from '@dfinity/principal';
+import RedeemCard from '../components/RedeemCard';
 
 function RedeemPage() {
     const location = useLocation();
@@ -76,7 +76,7 @@ function RedeemPage() {
         <>
             {isConnected ?
                 <>
-                    <CouponCard redeemCoupon={redeemCoupon} isClaim={true} id={id} amount={Number(coupon?.amount) || 0} state={coupon?.state || {}}></CouponCard>
+                    <RedeemCard redeemCoupon={redeemCoupon} id={id} amount={Number(coupon?.amount) || 0} state={coupon?.state || {}}></RedeemCard>
                     {response &&
                         <p className='break-normal'>{response}</p>
                     }

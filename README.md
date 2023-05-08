@@ -54,7 +54,7 @@ you only need this part: `362pf-fiaaa-aaaap-qbaoq-cai`
 owner = principal \"rrkah-fqaaa-aaaaa-aaaaq-cai\";   
                   subaccount = null;                                  
               };                                              
-              100                                 
+              100_000_000_000                                 
           }                                                   
       };                                                      
       min_burn_amount = 10_000_000;                           

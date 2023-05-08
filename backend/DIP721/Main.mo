@@ -30,7 +30,9 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   type Event = {
     id : Text;
+    transactionId : Nat;
     nftName : Text;
+    description : Text;
     startDate : ?Nat;
     endDate : ?Nat;
     nftType : Text;
@@ -87,24 +89,23 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     logo_type = "img";
     data = "";
   };
-  stable var name : Text = "ICP Italia Events";
-  stable var symbol : Text = "ICPIE";
+  stable var name : Text = "ICP Italia Hub Badges";
+  stable var symbol : Text = "ICITA";
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   let CKBTC_FEE : Nat = 10;
-  let IS_PROD = true;
+  let IS_PROD = false;
+  stable var storage_canister_id : Text = "";
   //TODO: update when deploying on mainnet
   let main_ledger_principal = "mxzaz-hqaaa-aaaar-qaada-cai"; //ckBTC_ledger_principal
   //let main_ledger_principal = "bkmua-faaaa-aaaap-qbc3a-cai";
   var icrc_principal = "ryjl3-tyaaa-aaaaa-aaaba-cai";
   if (IS_PROD) {
     icrc_principal := main_ledger_principal;
+    storage_canister_id := "5aui7-6qaaa-aaaap-qba2a-cai";
   };
-  // let ledger_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
 
   ///////DIP721 INTERFACE///////////
-
-  stable var storage_canister_id : Text = "";
   let null_address : Principal = Principal.fromText("aaaaa-aa");
 
   public query func balanceOfDip721(user : Principal) : async Nat64 {
@@ -484,13 +485,17 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   //// EVENTS //////////////////////
 
-  private func getEventMetadata(name : Text, fileType : Text, url : Text, eventId : Text) : Types.MetadataDesc {
+  private func getEventMetadata(name : Text, description : Text, fileType : Text, url : Text, eventId : Text, nftId : Nat) : Types.MetadataDesc {
     return [{
       purpose = #Rendered;
       key_val_data = [
         {
           key = "name";
           val = #TextContent(name);
+        },
+        {
+          key = "description";
+          val = #TextContent(description);
         },
         {
           key = "contentType";
@@ -508,6 +513,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           key = "eventId";
           val = #TextContent(eventId);
         },
+        {
+          key = "nftId";
+          val = #NatContent(nftId);
+        },
 
       ];
       data = Blob.fromArray([]);
@@ -522,7 +531,11 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let fuzz = Fuzz.Fuzz();
     let eventId = fuzz.text.randomAlphanumeric(16);
     Debug.print(debug_show (eventData));
-    let event = { eventData with id = eventId; creationDate = Time.now() };
+    let event = {
+      eventData with id = eventId;
+      creationDate = Time.now();
+      transactionId = 0;
+    };
     Debug.print(debug_show (event));
     ignore Map.put(events, thash, eventId, event);
     ignore update_status(#update_cycle_balance);
@@ -568,67 +581,71 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
     // get event metadata
     var nftName = "ERROR";
+    var description = "ERROR";
     var nftType = "ERROR";
     var nftUrl = "ERROR";
     var eventId = "ERROR";
+    var txId = 0;
     var eventState : { #active; #ended; #inactive } = #ended;
     switch (Map.get(events, thash, id)) {
-      case (?exists) {
-        nftName := exists.nftName;
-        nftType := exists.nftType;
-        nftUrl := exists.nftUrl;
-        eventState := exists.state;
-        eventId := exists.id;
+      case (?event) {
+        nftName := event.nftName;
+        nftType := event.nftType;
+        nftUrl := event.nftUrl;
+        description := event.description;
+        eventState := event.state;
+        eventId := event.id;
+        //TODO check timeframe
+
+        switch (eventState) {
+          case (#active) {
+            // check if user has already redeemed
+            let check = Map.get(eventsByPrincipal, pthash, (caller, id));
+            switch (check) {
+              case (?exists) {
+                return #err("Already redeemed");
+              };
+              case (null) {
+                //update txid
+                ignore Map.put(events, thash, eventId, { event with transactionId = event.transactionId + 1 });
+                txId := event.transactionId + 1;
+
+                let newId = Nat64.fromNat(List.size(nfts));
+                let nft : Types.Nft = {
+                  owner = caller;
+                  id = newId;
+                  metadata = getEventMetadata(nftName, description, nftType, nftUrl, eventId, txId);
+                };
+
+                nfts := List.push(nft, nfts);
+
+                transactionId += 1;
+                ignore Map.put(eventsByPrincipal, pthash, (caller, id), newId);
+                return #ok(Nat64.toText(newId));
+              };
+            };
+          };
+          case (#ended) {
+            return #err("The event is over");
+          };
+          case (#inactive) {
+            return #err("The event hasn't started yet");
+          };
+        };
       };
       case (null) {
         return #err("No such event");
-      };
-    };
-
-    switch (eventState) {
-      case (#active) {
-
-      };
-      case (#ended) {
-        return #err("The event is over");
-      };
-      case (#inactive) {
-        return #err("The event hasn't started yet");
-      };
-    };
-
-    //TODO check timeframe
-
-    //check if user has already redeemed
-    let check = Map.get(eventsByPrincipal, pthash, (caller, id));
-    switch (check) {
-      case (?exists) {
-        return #err("Already redeemed");
-      };
-      case (null) {
-        let newId = Nat64.fromNat(List.size(nfts));
-        let nft : Types.Nft = {
-          owner = caller;
-          id = newId;
-          metadata = getEventMetadata(nftName, nftType, nftUrl, eventId);
-        };
-
-        nfts := List.push(nft, nfts);
-
-        transactionId += 1;
-        ignore Map.put(eventsByPrincipal, pthash, (caller, id), newId);
-        return #ok(Nat64.toText(newId));
       };
     };
   };
 
   /////////////////ADMIN////////////////////////////////////
 
-  public shared ({ caller }) func isCustodian() : async Text {
+  public shared ({ caller }) func isCustodian() : async Bool {
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
-      return "not custodian";
+      return false;
     };
-    return "custodian";
+    return true;
   };
 
   public shared ({ caller }) func addCustodian(new_custodian : Principal) : async Result.Result<Text, Text> {
