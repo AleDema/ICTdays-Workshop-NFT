@@ -8,15 +8,16 @@ function RedeemCard(props) {
     const [nftCanister] = useCanister("DIP721")
     const [walletProvider] = useWallet()
     const [loading, setLoading] = React.useState(false)
-    const [response, setResponse] = React.useState()
+    const [response, setResponse] = React.useState("none")
+    const [responseText, setResponseText] = React.useState()
     const navigate = useNavigate();
     const redeemCoupon = async () => {
-        setResponse()
+        setResponse("none")
         setLoading(true)
         let res;
         if (walletProvider?.meta?.name === "ICX") {
             //setResponse(walletProvider?.wallets[0].principal)
-            setResponse("Redeeming")
+            //setResponse("Redeeming")
             let principal = Principal.fromText(walletProvider?.wallets[0].principal)
             res = await nftCanister.redeemCouponToPrincipal(props.id, principal)
         }
@@ -25,15 +26,16 @@ function RedeemCard(props) {
         }
         setLoading(false)
         if (res.ok) {
-            setResponse("Success! You claimed the coupon, check your wallet.")
+            setResponse("success")
             //setResponse(res.ok)
         } else if (res.err) {
-            setResponse(res.err)
+            setResponse("error")
+            setResponseText(res.err)
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000)
+            //setResponse(res.err)
         }
-
-        // setTimeout(() => {
-        //     window.location.reload();
-        // }, 3000)
     }
 
     console.log(props)
@@ -48,9 +50,23 @@ function RedeemCard(props) {
         :
         <>
             <a href="#" className="btn btn-cart btn-outline" onClick={redeemCoupon}>
-                <span>
-                    Redeem Coupon
-                </span>
+                {response === "success" &&
+                    <span>
+                        Success! Check your wallet
+                    </span>
+                }
+
+                {response === "none" &&
+                    <span>
+                        Redeem Coupon
+                    </span>
+                }
+
+                {response === "error" &&
+                    <span>
+                        {responseText}
+                    </span>
+                }
             </a>
         </>
     if (props.state.frozen === null) {
@@ -58,7 +74,7 @@ function RedeemCard(props) {
         button = <button className='bg-[#5a0cea] w-full'>Coupon isn't active</button>
     } else if (props.state.redeemed === null) {
         state = "Redeemed"
-        button = <button className='bg-[#ea610c] w-full'>Coupon has been redeemed</button>
+        button = <button className='bg-[#ea610c] w-full'>Coupon has been redeemed :(</button>
     }
     return (
         <>
@@ -79,7 +95,6 @@ function RedeemCard(props) {
                     </div>
                 </div>
             </div>
-            {response && response}
         </>
     )
 }

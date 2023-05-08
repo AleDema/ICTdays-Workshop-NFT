@@ -302,6 +302,7 @@ function AdminPage(props) {
         const res = await nftCanister.createEventNft({ transactionId: 0, nftName: nftNameField.current.value, description: nftDescriptionField.current.value, nftUrl: onChainFile.url, nftType: onChainFile.content_type, id: "", state: { active: null }, limit: [], startDate: [], endDate: [], creationDate: 0 })
         console.log(res)
         setLoading(false)
+        updateStatus()
     }
 
     const handleChange = async () => { }
@@ -317,6 +318,7 @@ function AdminPage(props) {
         let normalizedAmount = Number(couponAmountField.current.value) * 1_000_000_00 //normalize for 8 decimals
         let res = await nftCanister.createCoupon({ id: "", state: { active: null }, limit: [], startDate: [], endDate: [], redeemer: [], amount: normalizedAmount })
         console.log(res)
+        updateStatus()
     }
 
     const fetchData = async () => {
@@ -333,6 +335,20 @@ function AdminPage(props) {
         if (coupons.ok) {
             setCoupons(coupons.ok);
         }
+
+        updateStatus()
+    }
+
+    const updateStatus = async () => {
+        let status = await nftCanister.get_status()
+        console.log(status)
+        setNftCanisterBalance(Number(status.nft_balance))
+        setNftCanisterLedgerBalance(Number(status.nft_ledger_balance))
+        setNftCanisterOustandingBalance(Number(status.outstanding_balance))
+        setNftCanisterBalance(Number(status.nft_balance))
+        setStorageCanisterBalance(Number(status.storage_balance))
+        setStorageCanisterBurn(Number(status.storage_daily_burn))
+        setStorageCanisterMemory(Number(status.storage_memory_used))
     }
 
     useEffect(() => {
@@ -340,15 +356,7 @@ function AdminPage(props) {
             if (nftCanister === null || principal === undefined) return
             fetchData();
             setIsCustodian(await nftCanister.isCustodian())
-            let status = await nftCanister.get_status()
-            console.log(status)
-            setNftCanisterBalance(Number(status.nft_balance))
-            setNftCanisterLedgerBalance(Number(status.nft_ledger_balance))
-            setNftCanisterOustandingBalance(Number(status.outstanding_balance))
-            setNftCanisterBalance(Number(status.nft_balance))
-            setStorageCanisterBalance(Number(status.storage_balance))
-            setStorageCanisterBurn(Number(status.storage_daily_burn))
-            setStorageCanisterMemory(Number(status.storage_memory_used))
+            updateStatus()
         }
         init()
         const intervalId = setInterval(async () => {
@@ -445,7 +453,7 @@ function AdminPage(props) {
                             <p>NFT Canister Cycles: {nftCanisterBalance}</p>
                             <p>Storage Canister Cycles: {storageCanisterBalance}</p>
                             <p>Storage Daily Cycle Burn: {storageCanisterBurn}</p>
-                            <p>Storage Memory Usage: {storageCanisterMemory} MB</p>
+                            <p>Storage Memory Usage: {storageCanisterMemory} Bytes</p>
                             <p>Estimated lifetime: {nftCanisterBalance / storageCanisterBurn} days left</p>
                             <p>Canister ckBTC balance: {nftCanisterLedgerBalance} ckSats</p>
                             <p>Canister outstanding balance: {nftCanisterOustandingBalance} ckSats</p>

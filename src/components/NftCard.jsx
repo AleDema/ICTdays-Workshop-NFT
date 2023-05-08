@@ -3,7 +3,7 @@ import '../index.scss';
 import { useCanister, useConnect } from "@connect2ic/react"
 import { useRef } from 'react'
 import { Principal } from '@dfinity/principal';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 function FileRenderer(props) {
     const { mimeType, src } = props;
@@ -26,21 +26,23 @@ function NftCard(props) {
     const addressField = useRef(null)
     const [loading, setLoading] = React.useState(false)
     const [response, setResponse] = React.useState()
+    const [result, setResult] = React.useState("none")
+    const [resultText, setResultText] = React.useState()
     const { isConnected, principal, activeProvider } = useConnect()
     const navigate = useNavigate();
-    // let { id } = useParams();
 
     const claimNft = async () => {
-        setResponse()
+        setResult("none")
         setLoading(true)
         let res = await nftCanister.claimEventNft(props.id)
         setLoading(false)
         console.log(res)
         //props.setResponse(res.ok || res.err)
         if (res.ok) {
-            setResponse("Success! You claimed an NFT")
+            setResult("success")
         } else if (res.err) {
-            setResponse(res.err)
+            setResult("error")
+            setResultText(res.err)
         }
         const timeout = setTimeout(() => {
             navigate('/');
@@ -56,6 +58,9 @@ function NftCard(props) {
             receipt = await nftCanister.transferFromDip721(Principal.fromText(principal), Principal.fromText(addressField?.current?.value), props.tokenId)
         } catch (e) {
             setResponse("Invalid Address!")
+            setTimeout(() => {
+                setResponse()
+            }, 5000)
             console.log(e)
         }
         setLoading(false)
@@ -82,6 +87,7 @@ function NftCard(props) {
                             <hr className="mb-5" />
                             <div className='tokenInfo'>
                             </div>
+                            <p className='text-red-600 transition-opacity duration-100 animate-pulse '>{response}</p>
                             {
                                 props.isClaim ?
                                     <>
@@ -91,9 +97,26 @@ function NftCard(props) {
                                                     Loading...
                                                 </span>
                                                 :
-                                                <span>
-                                                    Claim NFT
-                                                </span>
+                                                <>
+                                                    {result === "success" &&
+                                                        <span>
+                                                            Success! Check your wallet
+                                                        </span>
+                                                    }
+
+                                                    {result === "none" &&
+                                                        <span>
+                                                            Claim NFT
+                                                        </span>
+                                                    }
+
+                                                    {result === "error" &&
+                                                        <span>
+                                                            {resultText}
+                                                        </span>
+                                                    }
+                                                </>
+
                                             }
                                         </a>
                                     </>
@@ -119,7 +142,6 @@ function NftCard(props) {
                         </div>
                     </div>
                 </div>
-                <p>{response && response}</p>
             </div>
         </>
 

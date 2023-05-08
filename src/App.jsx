@@ -112,7 +112,7 @@ function App(props) {
         <>
           {/* <p>{principal}</p> */}
 
-          <h2 className='font-bold'>My Collection</h2>
+          <h2 className='font-bold text-lg'>My Collection</h2>
           {
             nfts.length > 0 ? (
               <div className="flex flex-row flex-wrap gap-10 justify-around m-auto">
