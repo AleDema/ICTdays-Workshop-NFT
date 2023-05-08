@@ -68,7 +68,7 @@ function NftCard(props) {
     return (
         <>
             <div className='flex flex-col '>
-                <div className=" min-w-[284px] min-h-[475px]">
+                <div className=" min-w-[302px] min-h-[475px]">
                     <div className="nft">
                         <div className='main'>
                             <FileRenderer src={props.url} mimeType={props.mimeType}></FileRenderer>
@@ -101,7 +101,7 @@ function NftCard(props) {
                                     <>
                                         <div className='flex flex-col items-start gap-2 w-full'>
                                             <input type="text" className="px-2 py-1 rounded-lg w-full" placeholder='Recipient address' ref={addressField}></input>
-                                            <p className='text-[12px] font-thin opacity-70'>Insert the address that will receive the NFT</p>
+                                            <p className='text-[12px] font-thin opacity-70 pb-2'>Insert the address that will receive the NFT</p>
                                         </div>
                                         <a href="#" className="btn btn-cart btn-outline" onClick={transferNft}>
                                             {loading ?

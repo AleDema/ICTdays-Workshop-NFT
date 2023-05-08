@@ -28,6 +28,15 @@
         text-decoration: none;
     }
 
+    h2 {
+        font-size: 1.5em;
+        margin-block-start: 0.83em;
+        margin-block-end: 0.83em;
+        margin-inline-start: 0px;
+        margin-inline-end: 0px;
+        font-weight: bold;
+    }
+
     .main {
         display: flex;
         flex-direction: column;
@@ -155,8 +164,10 @@
     border-radius: 50px;
     border: 2px solid rgba(255, 255, 255, 0.7);
     height: 50px;
+    width: auto;
     min-height: 50px;
     transition: 0.7s;
+    align-self: center;
 }
 
 .btn-cart:hover {
