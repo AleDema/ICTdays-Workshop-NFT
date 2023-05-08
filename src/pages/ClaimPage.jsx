@@ -20,20 +20,6 @@ function ClaimPage() {
     const navigate = useNavigate();
     let { id } = useParams();
 
-    const claimNft = async () => {
-        let res = await nftCanister.claimEventNft(id)
-        console.log(res)
-        setResponse(res.ok || res.err)
-        if (res.ok) {
-            setResponse("Success! You claimed an NFT")
-        } else if (res.err) {
-            setResponse(res.err)
-        }
-        const timeout = setTimeout(() => {
-            navigate('/');
-        }, 4000)
-    }
-
     React.useEffect(() => {
         const init = async () => {
             let nftdata = await nftCanister.getEvent(id);
@@ -48,9 +34,7 @@ function ClaimPage() {
         <div className="flex items-center justify-center">
             {isConnected ?
                 <div className="flex flex-col">
-                    <Suspense fallback={<div>Loading...</div>}>
-                        {event && <NftCard claimNft={claimNft} isClaim={true} id={id} description={event?.description} mimeType={event?.nftType || "img"} key={id} name={event?.nftName} url={event?.nftUrl} state={event.state}></NftCard>}
-                    </Suspense>
+                    {event && <NftCard setResponse={setResponse} isClaim={true} id={id} description={event?.description} mimeType={event?.nftType || "img"} key={id} name={event?.nftName} url={event?.nftUrl} state={event.state}></NftCard>}
                     {response &&
                         <p>{response}</p>
                     }

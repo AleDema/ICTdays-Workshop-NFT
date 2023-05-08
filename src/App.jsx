@@ -59,25 +59,6 @@ function App(props) {
     setNfts([])
   }
 
-  const createLedgerActor = async (id) => {
-    const ledgerCanisterId = id
-    console.log(`Ledger Canister ID: ${ledgerCanisterId}`)
-    const ledgerActor = await activeProvider.createActor(ledgerCanisterId, ledgerFactory)
-    //console.log(nftActor)
-    //setLedgerCanister(ledgerActor.value)
-    return ledgerActor.value
-  }
-
-  const initLedger = async () => {
-
-    if (principal === null || principal === undefined) return;
-    if (storageCanister !== null) return;
-    const id = await nftCanister.get_ledger_canister_id();
-    if (id !== "") {
-      return await createLedgerActor(id)
-    }
-  }
-
 
   const transferNft = async (id, address) => {
     console.log(`Transfer to: ${address} NFT with id: ${id}`)
@@ -129,14 +110,8 @@ function App(props) {
     < >
       {principal !== undefined && nftCanister !== null &&
         <>
-          {/* <p>{principal}</p>
+          {/* <p>{principal}</p> */}
 
-          <p>
-            {walletProvider?.wallets[0].principal}
-          </p>
-          <p>
-            {walletProvider?.wallets[0].accountId}
-          </p> */}
           <h2 className='font-bold'>My Collection</h2>
           {
             nfts.length > 0 ? (
@@ -154,7 +129,7 @@ function App(props) {
                     })
                     return (
                       // <Card tokenId={e.token_id} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft}></Card>
-                      <NftCard tokenId={e.token_id} nftId={nftId} description={description} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft} isClaim={false}></NftCard>
+                      <NftCard setNfts={setNfts} tokenId={e.token_id} nftId={nftId} description={description} mimeType={mimeType} key={e.token_id} name={name} url={url} transfer={transferNft} isClaim={false}></NftCard>
                     )
                   })
                 }

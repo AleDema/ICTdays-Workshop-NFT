@@ -7,7 +7,14 @@ function RedeemCard(props) {
 
     console.log(props)
     let state = "Active"
-    let button = <button className='bg-[#0C93EA] w-full' onClick={props.redeemCoupon}>Redeem Coupon</button>
+    let button =
+        <>
+            <a href="#" class="btn btn-cart btn-outline" onClick={props.redeemCoupon}>
+                <span>
+                    Redeem Coupon
+                </span>
+            </a>
+        </>
     if (props.state.frozen === null) {
         state = "Frozen"
         button = <button className='bg-[#5a0cea] w-full'>Coupon isn't active</button>
@@ -19,11 +26,13 @@ function RedeemCard(props) {
         <div className=" min-w-[284px] min-h-[475px]">
             <div className="nft">
                 <div className='main'>
-                    <img class='tokenImage' src='/ckbtc.webp' alt="Coupon" />
-                    <p> ckBTC Coupon</p >
-                    <p>Amount: {Number(props.amount)} ckSats</p>
-                    <p>State: {state}</p>
-                    <p>ID: {props.id}</p>
+                    <img className='tokenImage' src='/ckbtc.webp' alt="Coupon" />
+                    <p className='description font-bold'> ckBTC Coupon</p >
+                    <span>
+                        <span><p className='description'>Amount: </p><p>{Number(props.amount)} ckSats</p></span>
+                        <p>State: {state}</p>
+                        <p>ID: {props.id}</p>
+                    </span>
                     <hr className="mb-5" />
                     <div className='tokenInfo'>
                     </div>
