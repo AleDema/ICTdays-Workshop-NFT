@@ -40,7 +40,7 @@ function RootLayout() {
 
             </span> */}
           </div >
-          <div className="self-end pr-8 ml-auto self-center">
+          <div className=" pr-3 ml-auto self-center">
             <ConnectButton />
             <ConnectDialog />
           </div>
