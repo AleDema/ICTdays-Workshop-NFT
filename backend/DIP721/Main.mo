@@ -85,6 +85,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   custodians := List.push(Principal.fromText("whaio-wy2tv-opnm3-4ld63-avbfc-zptux-663rl-mhejh-x5szu-45r6s-lqe"), custodians);
   custodians := List.push(Principal.fromText("lthbc-s7c4h-3oo2v-olnlk-kvil4-p34hi-26t5g-4ciyd-di65k-hbh5n-hae"), custodians);
   custodians := List.push(Principal.fromText("ongl2-c2ceb-mfxvy-63cc7-tmil7-xznc6-wmy2y-sqb6f-cs546-2l23t-wae"), custodians);
+  custodians := List.push(Principal.fromText("iwnta-rdyti-ucuvq-j3ugn-ajdvd-o4c7b-7u7f3-xsfzp-rxbh6-fpbnk-sqe"), custodians);
   stable var logo : Types.LogoResult = {
     logo_type = "img";
     data = "";
@@ -214,19 +215,12 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return maxLimit;
   };
 
-  public func getMetadataForUserDip721(user : Principal) : async Types.ExtendedMetadataResult {
-    let item = List.find(nfts, func(token : Types.Nft) : Bool { token.owner == user });
-    switch (item) {
-      case null {
-        return #Err(#Other);
-      };
-      case (?token) {
-        return #Ok({
-          metadata_desc = token.metadata;
-          token_id = token.id;
-        });
-      };
-    };
+  public func getMetadataForUserDip721(user : Principal) : async [Types.ExtendedMetadataResult] {
+    let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == user });
+    let res = List.map(items, func(item : Types.Nft) : Types.ExtendedMetadataResult {
+      return { token_id = item.id; metadata_desc = item.metadata }
+      });
+    return List.toArray(res);
   };
 
   public query func getTokenIdsForUserDip721(user : Principal) : async [Types.TokenId] {
