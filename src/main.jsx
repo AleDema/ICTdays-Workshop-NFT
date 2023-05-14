@@ -53,9 +53,7 @@ const client = createClient({
 // console.log(defaultProviders)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
     <Connect2ICProvider client={client}>
       <App />
     </Connect2ICProvider>
-  </React.StrictMode>,
 );

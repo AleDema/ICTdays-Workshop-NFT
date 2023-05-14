@@ -187,9 +187,9 @@ function AdminPage(props) {
     }
 
     function validateFile(file) {
-        const maxSize = 1024 * 1024 * 10; // 10 MB
+        const maxSize = 1024 * 1024 * 30; // 10 MB
         if (file.size > maxSize) {
-            setError('File size exceeds 10 MB');
+            setError('File size exceeds 30 MB');
             setFile(null);
         } else {
             setError(null);

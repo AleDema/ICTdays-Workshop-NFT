@@ -46,7 +46,7 @@ function NftCard(props) {
         }
         const timeout = setTimeout(() => {
             navigate('/');
-        }, 4000)
+        }, 2000)
     }
 
     const transferNft = async () => {
@@ -77,13 +77,17 @@ function NftCard(props) {
                     <div className="nft">
                         <div className='main'>
                             <FileRenderer src={props.url} mimeType={props.mimeType}></FileRenderer>
+
                             {
                                 props.isClaim ?
                                     <h2>{props.name}</h2>
                                     :
-                                    <h2>{props.name} #{props.nftId}</h2>
+                                    <>
+                                    <h2>{props.name}</h2>
+                                    <p className='description'>#{props.nftId}</p>
+                                    </>
+                
                             }
-                            <p className='description'>{props.description}</p>
                             <hr className="mb-5" />
                             <div className='tokenInfo'>
                             </div>
@@ -100,7 +104,7 @@ function NftCard(props) {
                                                 <>
                                                     {result === "success" &&
                                                         <span>
-                                                            Success! Check your wallet
+                                                            Success!
                                                         </span>
                                                     }
 

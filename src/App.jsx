@@ -21,7 +21,7 @@ import NftCard from './components/NftCard';
 //import { idlFactory as ledgerFactory } from "./lib/ledger.did.js"
 
 function App(props) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCustodian, setIsCustodian] = useState(false);
   //const [ledgerCanister, setLedgerCanister] = useState(null);
@@ -54,7 +54,7 @@ function App(props) {
     //clean up state
     setIsCustodian(false)
     state.isAdmin = false;
-    setLoading(null)
+    setLoading(true)
     // setLedgerCanister(null)
     setNfts([])
   }
@@ -92,11 +92,15 @@ function App(props) {
 
   useEffect(() => {
     const init = async () => {
-      if (nftCanister === null) return
+      if (nftCanister === null || principal === undefined) return
+      console.log("HELLO")
+      console.log(principal)
+      setLoading(true)
+      await fetchData();
+      setLoading(false)
       let check = await nftCanister.isCustodian();
       setIsCustodian(check);
       state.isAdmin = check;
-      fetchData();
     }
     init()
     const intervalId = setInterval(async () => {
@@ -104,7 +108,7 @@ function App(props) {
     }, 15000);
 
     return () => clearInterval(intervalId);
-  }, [nftCanister, principal]);
+  }, [principal]);
 
   return (
     < >
@@ -133,7 +137,14 @@ function App(props) {
                     )
                   })
                 }
-              </div>) : (<div className="flex justify-center items-center mt-5" >You don't have any NFTs</div>)
+              </div>) : 
+                loading ? 
+                <div className="flex justify-center items-center mt-5"> Loading NFTs...</div>
+                :
+                <div className="flex justify-center items-center mt-5" >You don't have any NFTs</div>
+
+              
+            
           }
         </>
       }

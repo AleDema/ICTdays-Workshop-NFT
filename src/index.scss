@@ -34,6 +34,7 @@
         margin-block-end: 0.83em;
         margin-inline-start: 0px;
         margin-inline-end: 0px;
+        margin-bottom: 0px;
         font-weight: bold;
     }
 
@@ -47,7 +48,7 @@
             border-radius: .5rem;
             max-width: 100%;
             height: 250px;
-            object-fit: cover;
+            // object-fit: cover;
         }
 
         .description {
