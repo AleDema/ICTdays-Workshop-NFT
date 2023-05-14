@@ -24,6 +24,7 @@ import Timer "mo:base/Timer";
 import ICRCTypes "../ledger/Types";
 import Int "mo:base/Int";
 import Int64 "mo:base/Int64";
+import Float "mo:base/Float";
 import Time "mo:base/Time";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
@@ -95,7 +96,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   let CKBTC_FEE : Nat = 10;
-  let IS_PROD = false;
+  let IS_PROD = true;
   stable var storage_canister_id : Text = "";
   //TODO: update when deploying on mainnet
   let main_ledger_principal = "mxzaz-hqaaa-aaaar-qaada-cai"; //ckBTC_ledger_principal
@@ -217,9 +218,12 @@ shared ({ caller }) actor class Dip721NFT() = Self {
 
   public func getMetadataForUserDip721(user : Principal) : async [Types.ExtendedMetadataResult] {
     let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == user });
-    let res = List.map(items, func(item : Types.Nft) : Types.ExtendedMetadataResult {
-      return { token_id = item.id; metadata_desc = item.metadata }
-      });
+    let res = List.map(
+      items,
+      func(item : Types.Nft) : Types.ExtendedMetadataResult {
+        return { token_id = item.id; metadata_desc = item.metadata };
+      },
+    );
     return List.toArray(res);
   };
 
@@ -227,6 +231,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == user });
     let tokenIds = List.map(items, func(item : Types.Nft) : Types.TokenId { item.id });
     return List.toArray(tokenIds);
+  };
+
+  public query func getAllTokens() : async [Types.Nft] {
+    return List.toArray(nfts);
   };
 
   public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {
@@ -247,6 +255,176 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       token_id = newId;
       id = transactionId;
     });
+  };
+
+  type TokenMetadata = {
+    transferred_at : ?Nat64;
+    transferred_by : ?Principal;
+    owner : ?Principal;
+    operator : ?Principal;
+    approved_at : ?Nat64;
+    approved_by : ?Principal;
+    properties : [(Text, GenericValue)];
+    is_burned : Bool;
+    token_identifier : Nat;
+    burned_at : ?Nat64;
+    burned_by : ?Principal;
+    minted_at : Nat64;
+    minted_by : Principal;
+  };
+
+  type Vec = [(Text, GenericValue)];
+
+  type NftError = {
+    #UnauthorizedOperator;
+    #SelfTransfer;
+    #TokenNotFound;
+    #UnauthorizedOwner;
+    #SelfApprove;
+    #OperatorNotFound;
+    #ExistedNFT;
+    #OwnerNotFound;
+  };
+
+  type GenericValue = {
+    #Nat64Content : Nat64;
+    #Nat32Content : Nat32;
+    #BoolContent : Bool;
+    #Nat8Content : Nat8;
+    #Int64Content : Int64;
+    #IntContent : Int;
+    #NatContent : Nat;
+    #Nat16Content : Nat16;
+    #Int32Content : Int32;
+    #Int8Content : Int8;
+    #FloatContent : Float;
+    #Int16Content : Int16;
+    #BlobContent : Blob; //[Nat8];
+    #NestedContent : Vec;
+    #Principal : Principal;
+    #TextContent : Text;
+  };
+
+  type ManualReply = {
+    logo : ?Text;
+    name : ?Text;
+    created_at : Nat64;
+    upgraded_at : Nat64;
+    custodians : [Principal];
+    symbol : ?Text;
+  };
+
+  public shared ({ caller }) func transfer(to : Principal, token_identifier : Types.TokenId) : async Types.Result<Nat, NftError> {
+    let item = List.find(nfts, func(token : Types.Nft) : Bool { token.id == token_identifier });
+    switch (item) {
+      case null {
+        return #Err(#TokenNotFound);
+      };
+      case (?token) {
+        if (
+          caller != token.owner and not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })
+        ) {
+          return #Err(#UnauthorizedOwner);
+        } else if (Principal.notEqual(caller, token.owner)) {
+          return #Err(#UnauthorizedOwner);
+        } else {
+          nfts := List.map(
+            nfts,
+            func(item : Types.Nft) : Types.Nft {
+              if (item.id == token.id) {
+                let update : Types.Nft = {
+                  owner = to;
+                  id = item.id;
+                  metadata = token.metadata;
+                };
+                return update;
+              } else {
+                return item;
+              };
+            },
+          );
+          transactionId += 1;
+          return #Ok(transactionId);
+        };
+      };
+    };
+  };
+
+  public query func ownerTokenMetadata(owner : Principal) : async Types.Result<[TokenMetadata], NftError> {
+    let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == owner });
+    let res = List.map(
+      items,
+      func(item : Types.Nft) : TokenMetadata {
+        var location : Types.MetadataVal = #TextContent("");
+        ignore Array.find<Types.MetadataKeyVal>(
+          item.metadata[0].key_val_data,
+          func(value : Types.MetadataKeyVal) : Bool {
+            if (Text.equal(value.key, "location")) {
+              location := value.val;
+              return true;
+            };
+            return false;
+          },
+        );
+        return {
+          // token_id = item.id;
+          // metadata_desc = item.metadata;
+          transferred_at = null;
+          transferred_by = null;
+          owner = ?item.owner;
+          operator = null;
+          approved_at = null;
+          approved_by = null;
+          properties = [
+            ("location", location),
+            ("thumbnail", location),
+            ("name", #TextContent("BWR23")),
+          ];
+          is_burned = false;
+          token_identifier = Nat64.toNat(item.id);
+          burned_at = null;
+          burned_by = null;
+          minted_at = 0;
+          minted_by = item.owner;
+        };
+      },
+    );
+    return #Ok(List.toArray(res));
+  };
+
+  public query func tokenMetadata(token_identifier : Types.TokenId) : async Types.Result<TokenMetadata, NftError> {
+    let item = List.find(nfts, func(token : Types.Nft) : Bool { token.id == token_identifier });
+    switch (item) {
+      case null {
+        return #Err(#TokenNotFound);
+      };
+      case (?token) {
+        return #Ok(
+          {
+
+            // token_id = item.id;
+            // metadata_desc = item.metadata;
+            transferred_at = null;
+            transferred_by = null;
+            owner = ?token.owner;
+            operator = null;
+            approved_at = null;
+            approved_by = null;
+            properties = [
+              ("location", #TextContent("https://vzb3d-qyaaa-aaaam-qaaqq-cai.raw.ic0.app/thumbnails/0001.png")),
+              ("thumbnail", #TextContent("https://vzb3d-qyaaa-aaaam-qaaqq-cai.raw.ic0.app/thumbnails/0001.png")),
+              ("name", #TextContent("BWR23")),
+            ];
+            is_burned = false;
+            token_identifier = Nat64.toNat(token.id);
+            burned_at = null;
+            burned_by = null;
+            minted_at = 0;
+            minted_by = token.owner;
+          }
+        );
+      };
+    };
   };
 
   //// COUPONS //////////////////////
@@ -567,6 +745,68 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       };
       case (null) {
         return #err("No event with this ID");
+      };
+    };
+  };
+
+  public shared ({ caller }) func claimEventNftToAddress(id : Text, to : Principal) : async Result.Result<Text, Text> {
+
+    // get event metadata
+    var nftName = "ERROR";
+    var description = "ERROR";
+    var nftType = "ERROR";
+    var nftUrl = "ERROR";
+    var eventId = "ERROR";
+    var txId = 0;
+    var eventState : { #active; #ended; #inactive } = #ended;
+    switch (Map.get(events, thash, id)) {
+      case (?event) {
+        nftName := event.nftName;
+        nftType := event.nftType;
+        nftUrl := event.nftUrl;
+        description := event.description;
+        eventState := event.state;
+        eventId := event.id;
+        //TODO check timeframe
+
+        switch (eventState) {
+          case (#active) {
+            // check if user has already redeemed
+            let check = Map.get(eventsByPrincipal, pthash, (to, id));
+            switch (check) {
+              case (?exists) {
+                return #err("Already redeemed");
+              };
+              case (null) {
+                //update txid
+                ignore Map.put(events, thash, eventId, { event with transactionId = event.transactionId + 1 });
+                txId := event.transactionId + 1;
+
+                let newId = Nat64.fromNat(List.size(nfts));
+                let nft : Types.Nft = {
+                  owner = to;
+                  id = newId;
+                  metadata = getEventMetadata(nftName, description, nftType, nftUrl, eventId, txId);
+                };
+
+                nfts := List.push(nft, nfts);
+
+                transactionId += 1;
+                ignore Map.put(eventsByPrincipal, pthash, (to, id), newId);
+                return #ok(Nat64.toText(newId));
+              };
+            };
+          };
+          case (#ended) {
+            return #err("The event is over");
+          };
+          case (#inactive) {
+            return #err("The event hasn't started yet");
+          };
+        };
+      };
+      case (null) {
+        return #err("No such event");
       };
     };
   };

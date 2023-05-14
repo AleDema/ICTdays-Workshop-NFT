@@ -1,6 +1,6 @@
 import React from 'react'
 import '../index.scss';
-import { useCanister, useConnect } from "@connect2ic/react"
+import { useCanister, useConnect, useWallet } from "@connect2ic/react"
 import { useRef } from 'react'
 import { Principal } from '@dfinity/principal';
 import { useNavigate } from 'react-router-dom';
@@ -22,9 +22,11 @@ function FileRenderer(props) {
 
 function NftCard(props) {
 
+    const [walletProvider] = useWallet()
     const [nftCanister] = useCanister("DIP721")
     const addressField = useRef(null)
     const [loading, setLoading] = React.useState(false)
+    const [transferingWallet, setTransferingWallet] = React.useState(false)
     const [response, setResponse] = React.useState()
     const [result, setResult] = React.useState("none")
     const [resultText, setResultText] = React.useState()
@@ -34,7 +36,15 @@ function NftCard(props) {
     const claimNft = async () => {
         setResult("none")
         setLoading(true)
-        let res = await nftCanister.claimEventNft(props.id)
+        let res
+        if (walletProvider?.meta?.name === "ICX") {
+            res = await nftCanister.claimEventNftToAddress(props.id, Principal.fromText(walletProvider?.wallets[0].principal))
+        }
+        else {
+            res = await nftCanister.claimEventNft(props.id)
+            //res = await nftCanister.claimEventNftToAddress(props.id, Principal.fromText(principal))
+        }
+
         setLoading(false)
         console.log(res)
         //props.setResponse(res.ok || res.err)
@@ -44,9 +54,12 @@ function NftCard(props) {
             setResult("error")
             setResultText(res.err)
         }
-        const timeout = setTimeout(() => {
-            navigate('/');
-        }, 2000)
+
+        if (walletProvider?.meta?.name !== "ICX") {
+            const timeout = setTimeout(() => {
+                navigate('/');
+            }, 2000)
+        }
     }
 
     const transferNft = async () => {
@@ -70,6 +83,27 @@ function NftCard(props) {
         })
     }
 
+    const transferNftToWallet = async () => {
+        setResponse()
+        setTransferingWallet(true)
+        console.log(`Transfer to: ${addressField?.current?.value} NFT with id: ${props.tokenId}`)
+        let receipt
+        try {
+            receipt = await nftCanister.transferFromDip721(Principal.fromText(principal), Principal.fromText(walletProvider?.wallets[0].principal), props.tokenId)
+        } catch (e) {
+            setResponse("Invalid Address!")
+            setTimeout(() => {
+                setResponse()
+            }, 5000)
+            console.log(e)
+        }
+        setTransferingWallet(false)
+        if (!receipt?.Ok) return;
+        props.setNfts((oldNfts) => {
+            return oldNfts.filter((item, i) => item.token_id !== props.tokenId);
+        })
+    }
+
     return (
         <>
             <div className='flex flex-col '>
@@ -83,10 +117,10 @@ function NftCard(props) {
                                     <h2>{props.name}</h2>
                                     :
                                     <>
-                                    <h2>{props.name}</h2>
-                                    <p className='description'>#{props.nftId}</p>
+                                        <h2>{props.name}</h2>
+                                        <p className='description'>#{props.nftId}</p>
                                     </>
-                
+
                             }
                             <hr className="mb-5" />
                             <div className='tokenInfo'>
@@ -102,9 +136,15 @@ function NftCard(props) {
                                                 </span>
                                                 :
                                                 <>
-                                                    {result === "success" &&
+                                                    {result === "success" && walletProvider?.meta?.name !== "ICX" &&
                                                         <span>
                                                             Success!
+                                                        </span>
+                                                    }
+
+                                                    {result === "success" && walletProvider?.meta?.name === "ICX" &&
+                                                        <span>
+                                                            Success! Check Your Wallet.
                                                         </span>
                                                     }
 
@@ -133,7 +173,7 @@ function NftCard(props) {
                                         <a href="#" className="btn btn-cart btn-outline" onClick={transferNft}>
                                             {loading ?
                                                 <span>
-                                                    Loading...
+                                                    Transfering...
                                                 </span>
                                                 :
                                                 <span>
@@ -141,6 +181,21 @@ function NftCard(props) {
                                                 </span>
                                             }
                                         </a>
+                                        {
+                                            walletProvider?.meta?.name === "ICX" &&
+                                            <a href="#" className="btn btn-cart btn-outline mt-3" onClick={transferNftToWallet}>
+                                                {
+                                                    transferingWallet ?
+                                                        <span>
+                                                            Transfering...
+                                                        </span>
+                                                        :
+                                                        <span>
+                                                            Transfer To Wallet
+                                                        </span>
+                                                }
+                                            </a>
+                                        }
                                     </>
                             }
                         </div>

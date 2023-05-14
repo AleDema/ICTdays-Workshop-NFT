@@ -52,7 +52,10 @@ module {
     metadata : MetadataDesc;
   };
 
-  public type ExtendedMetadataResult = { metadata_desc : MetadataDesc; token_id : TokenId };
+  public type ExtendedMetadataResult = {
+    metadata_desc : MetadataDesc;
+    token_id : TokenId;
+  };
 
   public type MetadataResult = Result<MetadataDesc, ApiError>;
 
