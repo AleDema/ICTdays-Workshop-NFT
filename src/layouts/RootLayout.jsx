@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Outlet } from "react-router-dom";
 import Footer from '../components/Footer';
 import { useSnapshot } from 'valtio'
@@ -10,7 +10,8 @@ import { ConnectButton, ConnectDialog, Connect2ICProvider, useConnect, useCanist
 
 function RootLayout() {
   const snap = useSnapshot(state)
-  const { isConnected, principal, activeProvider } = useConnect({
+  const [walletProvider] = useWallet()
+  const { isConnected, principal, activeProvider, disconnect } = useConnect({
     onConnect: () => {
       // Signed in
       console.log("onConnect")
@@ -22,7 +23,15 @@ function RootLayout() {
     }
   })
 
-  console.log(state.isAdmin)
+
+  useEffect(() => {
+    setTimeout(() => {
+      //if (walletProvider?.meta?.name === "ICX")
+      disconnect()
+    }, 50)
+  }, [])
+
+  //console.log(state.isAdmin)
   return (
     <>
       <div className="w-screen min-h-screen flex flex-col overflow-auto flex-wrap">
