@@ -72,9 +72,9 @@ owner = principal \"362pf-fiaaa-aaaap-qbaoq-cai\";
   })"
 `
 
-dfx canister call frontend2 set_asset_properties '( record { key="**/*"; allow_raw_access=opt(opt(true)) })'
+- dfx canister call frontend2 set_asset_properties '( record { key="**/*"; allow_raw_access=opt(opt(true)) })'
 
-dfx canister call DIP721 set_storage_canister_id "(principal \"5aui7-6qaaa-aaaap-qba2a-cai\")"
-dfx canister call DIP721 --network ic setLedgerCanisterId "(principal \"bkmua-faaaa-aaaap-qbc3a-cai\")"
-dfx canister call --network ic DIP721 addCustodian "(principal \"juswz-xp6pw-7ugyq-m4qig-yr5ud-kxxy7-5sw3r-55cxm-7zxab-glxnc-gae\")"
-dfx canister call --network ic Storage addCustodian "(principal \"ovjkw-7iaaa-aaaap-qbptq-cai\")"
+- dfx canister call DIP721 set_storage_canister_id "(principal \"5aui7-6qaaa-aaaap-qba2a-cai\")"
+- dfx canister call DIP721 --network ic setLedgerCanisterId "(principal \"bkmua-faaaa-aaaap-qbc3a-cai\")"
+- dfx canister call --network ic DIP721 addCustodian "(principal \"juswz-xp6pw-7ugyq-m4qig-yr5ud-kxxy7-5sw3r-55cxm-7zxab-glxnc-gae\")"
+- dfx canister call --network ic Storage addCustodian "(principal \"ovjkw-7iaaa-aaaap-qbptq-cai\")"
