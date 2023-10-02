@@ -1,5 +1,6 @@
 {
-    "dfx": "0.14.0",
+    "dfx": "0.15.0",
+    "output_env_file": ".env",
     "defaults": {
         "build": {
             "packtool": "npm run --silent sources"
@@ -21,6 +22,9 @@
         },
         "frontend": {
             "type": "assets",
+            "dependencies": [
+                "DIP721"
+            ],
             "frontend": {
                 "entrypoint": "dist/index.html"
             },

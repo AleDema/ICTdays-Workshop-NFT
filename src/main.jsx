@@ -29,7 +29,7 @@ console.log(process.env.DIP721_CANISTER_ID)
 //console.log(process.env?.NODE_ENV)
 
 //console.log(import.meta.env.MOPS_ENV)
-console.log(import.meta.env.DEV)
+// console.log(import.meta.env.DEV)
 
 const client = createClient({
   canisters: {
@@ -39,21 +39,21 @@ const client = createClient({
     window.icx ? new ICX() :
       new AstroX(),
     new NFID(),
-    new PlugWallet(),
+    //new PlugWallet(),
     //  new InternetIdentity(),
   ],
   globalProviderConfig: {
     dev: import.meta.env.DEV,
     // host: host,
     // whitelist: [process.env.DIP721_CANISTER_ID],
-    appName: "ICP PoAP",
+    appName: "Web3 Night Live",
   },
 })
 
 // console.log(defaultProviders)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-    <Connect2ICProvider client={client}>
-      <App />
-    </Connect2ICProvider>
+  <Connect2ICProvider client={client}>
+    <App />
+  </Connect2ICProvider>
 );

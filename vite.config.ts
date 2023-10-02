@@ -4,6 +4,7 @@ import { join } from 'path';
 import { defineConfig } from 'vite';
 
 const localNetwork = 'local';
+const isDev = process.env["DFX_NETWORK"] !== "ic"
 const network = process.env['DFX_NETWORK'] || localNetwork;
 
 let canisterIdPath: string;
@@ -27,6 +28,9 @@ export default defineConfig({
     plugins: [react()],
     define: {
         global: 'window',
+        "process.env.NODE_ENV": JSON.stringify(
+            isDev ? "development" : "production",
+        ),
         'process.env.DFX_NETWORK': JSON.stringify(process.env.DFX_NETWORK),
         // Expose canister IDs provided by `dfx deploy`
         ...Object.fromEntries(

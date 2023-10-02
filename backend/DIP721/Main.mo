@@ -91,8 +91,8 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     logo_type = "img";
     data = "";
   };
-  stable var name : Text = "ICP Italia Hub Badges";
-  stable var symbol : Text = "ICITA";
+  stable var name : Text = "Web3 Night Live";
+  stable var symbol : Text = "WNL";
   stable var maxLimit : Nat16 = 100;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   let CKBTC_FEE : Nat = 10;
@@ -228,6 +228,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   };
 
   public query func getTokenIdsForUserDip721(user : Principal) : async [Types.TokenId] {
+    //Debug.print(debug_show (user));
     let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == user });
     let tokenIds = List.map(items, func(item : Types.Nft) : Types.TokenId { item.id });
     return List.toArray(tokenIds);
@@ -378,7 +379,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
           properties = [
             ("location", location),
             ("thumbnail", location),
-            ("name", #TextContent("BWR23")),
+            ("name", #TextContent("WNL23")),
           ];
           is_burned = false;
           token_identifier = Nat64.toNat(item.id);
@@ -399,30 +400,39 @@ shared ({ caller }) actor class Dip721NFT() = Self {
         return #Err(#TokenNotFound);
       };
       case (?token) {
-        return #Ok(
-          {
-
-            // token_id = item.id;
-            // metadata_desc = item.metadata;
-            transferred_at = null;
-            transferred_by = null;
-            owner = ?token.owner;
-            operator = null;
-            approved_at = null;
-            approved_by = null;
-            properties = [
-              ("location", #TextContent("https://vzb3d-qyaaa-aaaam-qaaqq-cai.raw.ic0.app/thumbnails/0001.png")),
-              ("thumbnail", #TextContent("https://vzb3d-qyaaa-aaaam-qaaqq-cai.raw.ic0.app/thumbnails/0001.png")),
-              ("name", #TextContent("BWR23")),
-            ];
-            is_burned = false;
-            token_identifier = Nat64.toNat(token.id);
-            burned_at = null;
-            burned_by = null;
-            minted_at = 0;
-            minted_by = token.owner;
-          }
+        var location : Types.MetadataVal = #TextContent("");
+        ignore Array.find<Types.MetadataKeyVal>(
+          token.metadata[0].key_val_data,
+          func(value : Types.MetadataKeyVal) : Bool {
+            if (Text.equal(value.key, "location")) {
+              location := value.val;
+              return true;
+            };
+            return false;
+          },
         );
+        return #Ok({
+
+          // token_id = item.id;
+          // metadata_desc = item.metadata;
+          transferred_at = null;
+          transferred_by = null;
+          owner = ?token.owner;
+          operator = null;
+          approved_at = null;
+          approved_by = null;
+          properties = [
+            ("location", location),
+            ("thumbnail", location),
+            ("name", #TextContent("WNL23")),
+          ];
+          is_burned = false;
+          token_identifier = Nat64.toNat(token.id);
+          burned_at = null;
+          burned_by = null;
+          minted_at = 0;
+          minted_by = token.owner;
+        });
       };
     };
   };
@@ -876,6 +886,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   /////////////////ADMIN////////////////////////////////////
 
   public shared ({ caller }) func isCustodian() : async Bool {
+    Debug.print(debug_show (caller));
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
       return false;
     };
@@ -919,12 +930,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
       idle_cycles_burned_per_day : Nat;
     });
 
-    update_settings : (
-      {
-        canister_id : Principal;
-        settings : canister_settings;
-      }
-    ) -> ();
+    update_settings : ({
+      canister_id : Principal;
+      settings : canister_settings;
+    }) -> ();
   };
 
   stable var isCreating = false;
