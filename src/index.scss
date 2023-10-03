@@ -7,11 +7,10 @@
     user-select: none;
     max-width: 300px;
     margin: 5rem auto;
-    border: 1px solid #ffffff22;
-    background-color: #282c34;
-    background: linear-gradient(0deg, rgba(40, 44, 52, 1) 0%, rgba(17, 0, 32, .5) 100%);
+    border: 1px solid rgba(255,255,255,.25);
+    background-color: #101010;
     box-shadow: 0 7px 20px 5px #00000088;
-    border-radius: .7rem;
+    border-radius: 1rem;
     backdrop-filter: blur(7px);
     -webkit-backdrop-filter: blur(7px);
     overflow: hidden;
@@ -21,7 +20,7 @@
         width: 100%;
         border: none;
         border-bottom: 1px solid #88888855;
-        margin-top: 0;
+        margin-top: .75rem;
     }
 
     ins {
@@ -42,12 +41,12 @@
         display: flex;
         flex-direction: column;
         // width: 90%;
-        padding: 1rem;
+        padding: 1rem 1rem 2rem;
+        align-items: 
 
         .tokenImage {
             border-radius: .5rem;
             max-width: 100%;
-            height: 250px;
             // object-fit: cover;
         }
 
@@ -162,13 +161,14 @@
     display: inline-flex;
     align-items: center;
     color: #fff;
-    border-radius: 50px;
-    border: 2px solid rgba(255, 255, 255, 0.7);
+    border-radius: .3rem;
+    border: 1px solid rgba(255, 255, 255, 1);
     height: 50px;
     width: auto;
     min-height: 50px;
     transition: 0.7s;
     align-self: center;
+    margin-top: .5rem;
 }
 
 .btn-cart:hover {
