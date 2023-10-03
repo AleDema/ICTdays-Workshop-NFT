@@ -4,7 +4,7 @@
 
 #root {
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-    font-size: 16px;
+    font-size: 18px;
     text-align: center;
     color-scheme: light dark;
     color: rgba(255, 255, 255, 0.87);
@@ -50,6 +50,7 @@ button:focus-visible {
     border-radius:0px !important;
     border: 1px solid #FFF!important;
     background: transparent !important;
+    padding: .25rem 1rem !important;
 }
 
 .logo {
