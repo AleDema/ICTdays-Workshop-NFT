@@ -151,7 +151,8 @@ function App(props) {
 
       {
         principal === undefined && <>
-          <p>Login to interact...</p>
+          <h2>WEB3 NIGHT LIVE</h2>
+          <p>Login to claim your NFT...</p>
         </>
       }
     </ >
