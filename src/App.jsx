@@ -151,7 +151,7 @@ function App(props) {
 
       {
         principal === undefined && <>
-          <h2>WEB3 NIGHT LIVE</h2>
+          <h2 className="mt-5">WEB3 NIGHT LIVE</h2>
           <p>Login to claim your NFT...</p>
         </>
       }
