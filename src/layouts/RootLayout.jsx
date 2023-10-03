@@ -40,7 +40,7 @@ function RootLayout() {
             <h1 className=''>Blockchain Week Minter</h1>
           </div> */}
           <div className='gap-4 flex p-8 font-bold self-center'>
-            <Link to={`/`}>Home</Link>
+            <Link to={`/`}>WNL</Link>
             {state.isAdmin && <Link to={`/admin`}>Admin Panel</Link>}
           </div>
           <div className="flex flex-row justify-center items-center m-auto hidden lg:block">
