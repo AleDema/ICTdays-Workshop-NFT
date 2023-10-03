@@ -46,6 +46,12 @@ button:focus-visible {
     outline: 4px auto -webkit-focus-ring-color;
 }
 
+.connect-button{
+    border-radius:0px !important;
+    border: 1px solid #FFF!important;
+    background: transparent !important;
+}
+
 .logo {
     height: 8em;
     padding: 1.5em;
